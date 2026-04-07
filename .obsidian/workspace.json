@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "fastapi学习.md",
+                "file": "Python学习.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "fastapi学习"
+              "title": "Python学习"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "fastapi学习.md",
+                "file": "Python学习.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "fastapi学习 的反向链接列表"
+              "title": "Python学习 的反向链接列表"
             }
           },
           {
@@ -198,6 +198,6 @@
   "lastOpenFiles": [
     "CLAUDE.md",
     "欢迎.md",
-    "fastapi学习.md"
+    "Python学习.md"
   ]
 }
