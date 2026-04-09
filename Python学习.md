@@ -5,8 +5,12 @@
 ### 1. 环境与基础
 - Python 解释器与版本（Python 2 vs Python 3）
 - 交互式环境（REPL）与脚本执行
-- 编码规范（PEP 8）
-- 注释与文档字符串
+- 编码规范（PEP 8）与 Pythonic 实践
+  - **核心命名**：Python 倾向 `snake_case`，类名使用 `PascalCase`（同 Java）。
+  - **空白逻辑**：严格 4 空格缩进，顶层定义空 2 行，方法内空 1 行。
+  - **Docstrings (Agent 核心)**：函数的文档字符串是工具描述的来源，需符合 PEP 257。
+  - **工具链**：推荐使用 Ruff (Linter) + Black (Formatter) + MyPy (Type Check)。
+- 注释与文档字符串规范
 
 ### 2. 变量与数据类型
 - 变量命名规则
