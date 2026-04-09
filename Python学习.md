@@ -12,15 +12,36 @@
   - **工具链**：推荐使用 Ruff (Linter) + Black (Formatter) + MyPy (Type Check)。
 - 注释与文档字符串规范
 
-### 2. 变量与数据类型
-- 变量命名规则
-- 基本数据类型
-  - 整数（int）
-  - 浮点数（float）
-  - 复数（complex）
-  - 布尔值（bool）
-  - 字符串（str）
-- 类型转换与类型检查（type(), isinstance()）
+### 2. 变量与数据类型 (Type Resilience)
+
+> [!TIP] Java 开发者迁移视角
+> Python 是典型的“鸭子类型”。在 Agent 开发中，我们通过 **Type Hints** 重新找回 Java 的静态类型安全性。
+
+#### 2.1 动态类型与类型提示 (Type Hints)
+*   **变量声明**：从 Java 的强约束到 Python 的暗示。
+    *   Python: `age: int = 25` (仅做提示，运行期不强制)
+    *   Java 相邻概念：类似 `var` (Java 10+)，但 Python 更加动态。
+*   **常用标准类型**：`int`, `float`, `bool`, `str`, `bytes` (Agent 序列化常用)。
+*   **复合类型 (typing 模块)**：`List[str]`, `Dict[str, Any]`, `Optional[int]` (对应 Java 的 `List<String>`, `Map<String, Object>`, `Optional<Integer>`)。
+
+#### 2.2 字符串——Agent 的主要语言
+*   **f-string (推荐)**：极其强大的格式化语法。
+    ```python
+    prompt = f"Hello {user_name}, your balance is {amount:.2f}"
+    ```
+*   **多行字符串**：用 `"""文本"""` 定义 Prompt 模板。
+*   **字节串 (bytes)**：Agent 处理图像、语音等非文本数据时的原始格式。
+
+#### 2.3 类型检查与转换
+*   **自省工具**：
+    *   `type(obj)`: 查看对象类型。
+    *   `isinstance(obj, Class)`: **推荐用法**，支持继承链检查（类似 Java 的 `instanceof`）。
+*   **强制转换**：`int()`, `str()`, `list()` 等构造函数。
+
+#### 2.4 Pydantic 进阶预告 (Agent 数据底座)
+*   **为什么不用原生 class？** 因为 Agent 需要在接收到模型的 JSON 输出时实现“自动校验”与“自动解析”。这部分将在《数据处理》章节详解。
+
+---
 
 ### 3. 运算符
 - 算术运算符（+, -, *, /, //, %, **）
