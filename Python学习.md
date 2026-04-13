@@ -547,20 +547,20 @@ prompt = (
 
 #### 📋 字符串方法速查表
 
-| 方法 | 说明 | 返回值 |
-|------|------|--------|
-| `s.upper()` | 转大写 | str |
-| `s.lower()` | 转小写 | str |
-| `s.strip()` | 去除空白 | str |
-| `s.split(sep)` | 分割 | list |
-| `s.join(iter)` | 连接 | str |
-| `s.replace(old, new)` | 替换 | str |
-| `s.find(sub)` | 查找位置 | int |
-| `s.startswith(s)` | 是否开头 | bool |
-| `s.endswith(s)` | 是否结尾 | bool |
-| `s.format(**kw)` | 格式化 | str |
-| `s.encode()` | 编码 | bytes |
-| `len(s)` | 长度 | int |
+| 方法                    | 说明   | 返回值   |
+| --------------------- | ---- | ----- |
+| `s.upper()`           | 转大写  | str   |
+| `s.lower()`           | 转小写  | str   |
+| `s.strip()`           | 去除空白 | str   |
+| `s.split(sep)`        | 分割   | list  |
+| `s.join(iter)`        | 连接   | str   |
+| `s.replace(old, new)` | 替换   | str   |
+| `s.find(sub)`         | 查找位置 | int   |
+| `s.startswith(s)`     | 是否开头 | bool  |
+| `s.endswith(s)`       | 是否结尾 | bool  |
+| `s.format(**kw)`      | 格式化  | str   |
+| `s.encode()`          | 编码   | bytes |
+| `len(s)`              | 长度   | int   |
 
 ---
 
