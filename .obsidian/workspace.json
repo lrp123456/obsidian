@@ -22,6 +22,27 @@
             }
           }
         ]
+      },
+      {
+        "id": "9c54f47ffb703e18",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "da47d81959f5fef7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Python学习.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Python学习 的大纲"
+            }
+          }
+        ]
       }
     ],
     "direction": "vertical"
@@ -180,7 +201,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -194,7 +216,7 @@
       "bases:新建数据库": false
     }
   },
-  "active": "7ddc2a667677507f",
+  "active": "da47d81959f5fef7",
   "lastOpenFiles": [
     "AGENTS.md",
     "skills/python-tutor.md",
