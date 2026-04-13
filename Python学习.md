@@ -1760,17 +1760,864 @@ for sq in squares_gen:
 ---
 
 ### 7. 函数基础
-- 函数定义与调用
-- 参数传递
-  - 位置参数
-  - 关键字参数
-  - 默认参数
-  - 可变位置参数（*args）
-  - 可变关键字参数（**kwargs）
-- 返回值与多返回值
-- 变量作用域（局部、全局、nonlocal）
-- 递归函数
-- lambda 表达式
+
+> [!TIP] Java 开发者视角
+> Python 函数与 Java 方法的主要区别：
+> - Python 函数是**一等公民**（可以赋值给变量、作为参数传递）
+> - 没有 `void` 关键字，用 `return None` 表示无返回值
+> - 不需要声明返回类型（可用 Type Hints 标注）
+> - 参数传递类似**按对象引用传递**（类似 Java 的引用传递）
+
+---
+
+#### 7.1 函数定义与调用
+
+##### 7.1.1 基本语法
+
+```python
+# 无参数函数
+def greet():
+    print("Hello, World!")
+
+greet()  # 调用
+
+# 有参数函数
+def greet(name):
+    print(f"Hello, {name}!")
+
+greet("Alice")  # Hello, Alice!
+
+# 有返回值的函数
+def add(a, b):
+    return a + b
+
+result = add(1, 2)  # 3
+```
+
+> [!WARNING] Python 函数不标注返回类型
+> 虽然可以加 Type Hints，但运行时不强制检查：
+> ```python
+> def add(a: int, b: int) -> int:
+>     return a + b
+> # 仍然可以返回字符串，不会报错
+> ```
+
+**Java 对比**：
+```java
+// Java 方法
+public int add(int a, int b) {
+    return a + b;
+}
+```
+
+##### 7.1.2 函数是第一等公民
+
+```python
+# 函数可以赋值给变量
+def square(x):
+    return x ** 2
+
+f = square  # f 现在是 square 函数
+print(f(5))  # 25
+
+# 函数可以作为参数传递
+def apply(func, value):
+    return func(value)
+
+result = apply(square, 5)  # 25
+
+# 函数可以作为返回值
+def multiplier(n):
+    def multiply(x):
+        return x * n
+    return multiply
+
+double = multiplier(2)
+print(double(5))  # 10
+```
+
+> [!TIP] 一等公民的意义
+> 这使得 Python 支持**函数式编程**范式：map、filter、reduce、装饰器等
+
+##### 7.1.3 文档字符串（Docstring）
+
+```python
+def calculate_area(width, height):
+    """计算矩形面积。
+    
+    Args:
+        width: 宽度（单位：米）
+        height: 高度（单位：米）
+    
+    Returns:
+        矩形面积（单位：平方米）
+    """
+    return width * height
+
+# 访问 docstring
+print(calculate_area.__doc__)
+help(calculate_area)
+```
+
+> [!TIP] Docstring 是 Agent 开发的核心
+> Agent 工具的描述、参数说明都来源于此。格式推荐 Google Style 或 NumPy Style。
+
+---
+
+#### 7.2 参数传递
+
+##### 7.2.1 位置参数
+
+```python
+# 按位置传递（与 Java 相同）
+def power(base, exponent):
+    return base ** exponent
+
+power(2, 3)   # 8
+power(3, 2)   # 9
+```
+
+##### 7.2.2 关键字参数
+
+```python
+# 按名称传递
+def greet(name, age):
+    print(f"{name}, {age}岁")
+
+greet(age=30, name="Alice")  # 顺序可以不同
+```
+
+**Java 对比**：
+```java
+// Java 没有关键字参数，只能按位置
+greet("Alice", 30);
+```
+
+##### 7.2.3 默认参数
+
+```python
+# 默认参数
+def greet(name, greeting="Hello"):
+    print(f"{greeting}, {name}!")
+
+greet("Alice")              # Hello, Alice!
+greet("Bob", "Hi")          # Hi, Bob!
+```
+
+> [!WARNING] 默认参数必须是不可变对象
+> 常见错误：使用列表或字典作为默认参数
+> ```python
+> # ❌ 错误！默认参数在定义时求值，只求值一次
+> def add_item(item, items=[]):
+>     items.append(item)
+>     return items
+> 
+> add_item(1)  # [1]
+> add_item(2)  # [1, 2]  期望是 [2]！
+> 
+> # ✅ 正确写法
+> def add_item(item, items=None):
+>     if items is None:
+>         items = []
+>     items.append(item)
+>     return items
+> ```
+
+##### 7.2.4 可变位置参数（*args）
+
+```python
+# *args 接收任意数量的位置参数（打包为元组）
+def sum(*numbers):
+    total = 0
+    for n in numbers:
+        total += n
+    return total
+
+sum(1, 2, 3)       # 6
+sum(1, 2, 3, 4, 5)  # 15
+
+# 解包操作
+numbers = [1, 2, 3, 4]
+sum(*numbers)     # 10（把列表展开为位置参数）
+```
+
+##### 7.2.5 可变关键字参数（**kwargs）
+
+```python
+# **kwargs 接收任意数量的关键字参数（打包为字典）
+def print_info(**info):
+    for key, value in info.items():
+        print(f"{key}: {value}")
+
+print_info(name="Alice", age=30, city="Beijing")
+# name: Alice
+# age: 30
+# city: Beijing
+
+# 解包操作
+data = {"name": "Bob", "age": 25}
+print_info(**data)  # 展开字典为关键字参数
+```
+
+##### 7.2.6 参数组合
+
+```python
+# 组合使用（顺序固定）
+def func(pos1, pos2, *args, key1="default", **kwargs):
+    print(f"pos: {pos1}, {pos2}")
+    print(f"args: {args}")
+    print(f"key1: {key1}")
+    print(f"kwargs: {kwargs}")
+
+func(1, 2, 3, 4, key1="custom", name="Alice")
+# pos: 1, 2
+# args: (3, 4)
+# key1: custom
+# kwargs: {'name': 'Alice'}
+```
+
+> [!TIP] 强制关键字参数（Python 3）
+> ```python
+> def func(pos_only, *, kw_only1, kw_only2):
+>     # * 之后的参数必须用关键字传递
+>     pass
+> 
+> func(1, kw_only1=2, kw_only2=3)  # OK
+> func(1, 2, 3)  # TypeError!
+> ```
+
+---
+
+#### 7.3 返回值与多返回值
+
+##### 7.3.1 基本返回值
+
+```python
+# 无 return 或 return None
+def no_return():
+    print("Hello")
+
+result = no_return()  # None
+
+# 单返回值
+def get_name():
+    return "Alice"
+
+name = get_name()  # "Alice"
+```
+
+##### 7.3.2 多返回值（Python 特有！）
+
+```python
+# 返回元组
+def get_stats(numbers):
+    return min(numbers), max(numbers), sum(numbers) / len(numbers)
+
+# 解包
+min_val, max_val, avg_val = get_stats([1, 2, 3, 4, 5])
+# min_val = 1, max_val = 5, avg_val = 3.0
+
+# 整体接收
+result = get_stats([1, 2, 3])
+# result = (1, 5, 3.0)
+```
+
+**Java 对比**：
+```java
+// Java 没有多返回值，必须用数组/对象/包装
+public class Stats {
+    public int min;
+    public int max;
+    public double avg;
+}
+
+// 或返回数组
+public int[] getStats(List<Integer> numbers) {
+    return new int[]{min, max, avg};
+}
+```
+
+##### 7.3.3 早期返回（Guard Clauses）
+
+```python
+# 防御式编程：提前返回减少嵌套
+def process(user):
+    # ❌ 嵌套写法
+    if user is not None:
+        if user.is_active:
+            if user.has_permission:
+                # 执行逻辑
+                pass
+    
+    # ✅ 卫语句写法（Guard Clauses）
+    if user is None:
+        return None
+    if not user.is_active:
+        return None
+    if not user.has_permission:
+        return None
+    
+    # 执行逻辑
+    return process_successfully(user)
+```
+
+---
+
+#### 7.4 变量作用域
+
+##### 7.4.1 LEGB 规则
+
+Python 按以下顺序查找变量：
+
+```
+L - Local      函数内部
+E - Enclosing   闭包函数（外层函数）
+G - Global      模块（文件）级别
+B - Built-in    Python 内置（len, print 等）
+```
+
+```python
+x = "global"  # Global
+
+def outer():
+    x = "enclosing"  # Enclosing
+    
+    def inner():
+        x = "local"  # Local
+        print(x)     # "local"（先找 local）
+    
+    inner()
+    print(x)          # "enclosing"
+
+outer()
+print(x)              # "global"
+```
+
+##### 7.4.2 global 和 nonlocal
+
+```python
+# global - 声明使用全局变量
+counter = 0
+
+def increment():
+    global counter
+    counter += 1
+
+increment()
+print(counter)  # 1
+```
+
+> [!WARNING] 滥用全局变量
+> 全局变量使代码难以调试和维护。优先使用参数传递和返回值。
+
+```python
+# nonlocal - 声明使用闭包外层变量
+def outer():
+    x = "outer"
+    
+    def inner():
+        nonlocal x
+        x = "inner"
+        print(x)
+    
+    inner()
+    print(x)
+
+outer()  # "inner", "inner"
+```
+
+##### 7.4.3 闭包（Closure）
+
+```python
+# 闭包：内层函数记住外层函数的变量
+def make_multiplier(factor):
+    def multiply(number):
+        return number * factor
+    return multiply
+
+times_3 = make_multiplier(3)
+times_5 = make_multiplier(5)
+
+print(times_3(10))  # 30
+print(times_5(10))  # 50
+```
+
+> [!TIP] 闭包 vs lambda
+> 闭包是带状态的函数，比 lambda 更强大：
+> ```python
+> # lambda 闭包
+> def make_multiplier(factor):
+>     return lambda n: n * factor
+> ```
+
+---
+
+#### 7.5 递归函数
+
+##### 7.5.1 基本递归
+
+```python
+# 阶乘
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+factorial(5)  # 120
+
+# 斐波那契数列
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+fibonacci(10)  # 55
+```
+
+> [!WARNING] 递归深度限制
+> Python 默认递归深度约 1000，超过会 `RecursionError`：
+> ```python
+> import sys
+> sys.getrecursionlimit()  # 1000
+> sys.setrecursionlimit(2000)  # 可以调整，但不推荐
+> ```
+
+##### 7.5.2 尾递归优化
+
+```python
+# Python 不支持尾递归优化（不同于 Scheme/Haskell）
+# 但可以用迭代替代
+
+# ❌ 递归（栈溢出风险）
+def fibonacci(n, a=0, b=1):
+    if n == 0:
+        return a
+    return fibonacci(n - 1, b, a + b)
+
+# ✅ 迭代（推荐）
+def fibonacci_iter(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+```
+
+##### 7.5.3 递归的常见模式
+
+```python
+# 1. 树结构遍历
+class TreeNode:
+    def __init__(self, val, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def inorder(node):
+    if node is None:
+        return []
+    return inorder(node.left) + [node.val] + inorder(node.right)
+
+# 2. 分治法
+def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+```
+
+---
+
+#### 7.6 lambda 表达式
+
+##### 7.6.1 基本语法
+
+```python
+# lambda 参数: 表达式
+square = lambda x: x ** 2
+add = lambda x, y: x + y
+
+square(5)  # 25
+add(1, 2)  # 3
+
+# 等同于
+def square(x):
+    return x ** 2
+```
+
+> [!WARNING] lambda 的限制
+> lambda 只能是**单个表达式**，不能包含语句（if、for、while 等）。
+
+##### 7.6.2 常见用法
+
+```python
+# 配合高阶函数
+numbers = [3, 1, 4, 1, 5, 9, 2, 6]
+sorted(numbers, key=lambda x: -x)  # 降序排列
+
+# map - 对每个元素应用函数
+list(map(lambda x: x * 2, [1, 2, 3]))  # [2, 4, 6]
+
+# filter - 过滤元素
+list(filter(lambda x: x % 2 == 0, [1, 2, 3, 4]))  # [2, 4]
+
+# reduce - 累积计算
+from functools import reduce
+reduce(lambda x, y: x + y, [1, 2, 3, 4])  # 10
+```
+
+**Java 对比**：
+```java
+// Java 使用匿名内部类或 Lambda (Java 8+)
+// Python lambda ≈ Java 的 Lambda 表达式
+// Python 的 map/filter ≈ Java Stream API
+```
+
+##### 7.6.3 lambda vs 普通函数
+
+| 特性 | lambda | def 函数 |
+|------|--------|---------|
+| 语句 | ❌ 只能是表达式 | ✅ 可以有多种语句 |
+| 名称 | 匿名 | 有名称 |
+| 文档 | ❌ 无法添加 | ✅ 可以有 docstring |
+| 作用域 | 受限 | 完全 |
+| 复杂度 | 简单 | 任意复杂 |
+| 使用场景 | 短函数、高阶函数参数 | 复杂逻辑 |
+
+> [!TIP] 何时用 lambda
+> - 作为参数传递给 `map`、`filter`、`sorted`
+> - 定义简单的、一次性的函数
+> - 闭包中捕获变量
+>
+> **何时不用**：逻辑复杂、多次使用、需要文档
+
+---
+
+#### 7.7 装饰器（Decorator）
+
+##### 7.7.1 基本概念
+
+```python
+# 装饰器：包装函数，增强功能
+def my_decorator(func):
+    def wrapper(*args, **kwargs):
+        print("Before calling")
+        result = func(*args, **kwargs)
+        print("After calling")
+        return result
+    return wrapper
+
+@my_decorator
+def say_hello():
+    print("Hello!")
+
+say_hello()
+# Before calling
+# Hello!
+# After calling
+```
+
+**等同于**：
+```python
+def say_hello():
+    print("Hello!")
+
+say_hello = my_decorator(say_hello)
+```
+
+##### 7.7.2 常用装饰器
+
+```python
+# 计时装饰器
+import time
+from functools import wraps
+
+def timer(func):
+    @wraps(func)  # 保留原函数元信息
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} took {time.time() - start:.2f}s")
+        return result
+    return wrapper
+
+@timer
+def slow_function():
+    time.sleep(1)
+    return "Done"
+
+# 类作为装饰器
+class CallCounter:
+    def __init__(self, func):
+        self.count = 0
+        self.func = func
+    
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"{self.func.__name__} called {self.count} times")
+        return self.func(*args, **kwargs)
+
+@CallCounter
+def greet():
+    print("Hello!")
+```
+
+---
+
+#### 📋 函数速查表
+
+| 特性 | 语法 | 说明 |
+|------|------|------|
+| 基本函数 | `def f(x): return x**2` | |
+| 默认参数 | `def f(x=1):` | 不可变对象 |
+| 可变参数 | `def f(*args):` | 元组 |
+| 关键字参数 | `def f(**kwargs):` | 字典 |
+| lambda | `lambda x: x**2` | 单表达式 |
+| 装饰器 | `@decorator` | 函数包装 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 函数参数传递是值传递还是引用传递？**
+   - 类似"按对象引用传递"（Object Reference），相当于 Java 的引用传递
+
+2. **什么是闭包？**
+   - 内层函数记住外层函数的变量
+
+3. **默认参数为什么不能用可变对象？**
+   - 默认参数在函数定义时求值，只求值一次，可变对象会被共享
+
+4. **lambda 和普通函数的区别？**
+   - lambda 是单表达式匿名函数，不能包含语句
+
+5. **LEGB 是什么？**
+   - Local → Enclosing → Global → Built-in 变量查找顺序
+
+6. **装饰器的作用？**
+   - 增强函数功能，不修改原函数代码
+
+---
+
+#### 🔬 深入理解：类、对象、函数、方法、构造体区别
+
+##### 7.8.1 核心概念辨析
+
+```python
+# 1. 类（Class）- 蓝图/模板
+class Dog:
+    """Dog 类定义"""
+    species = "犬科"  # 类属性
+    
+    def __init__(self, name, age):  # 构造函数
+        self.name = name  # 实例属性
+        self.age = age
+    
+    def bark(self):  # 实例方法
+        return f"{self.name} 在叫！"
+
+# 2. 对象（Object）- 类的实例
+dog1 = Dog("旺财", 3)  # dog1 是 Dog 类的实例
+dog2 = Dog("小白", 5)  # dog2 是另一个实例
+
+# 3. 函数（Function）- 独立函数
+def standalone_function(x):
+    """独立函数，不属于任何类"""
+    return x * 2
+
+# 4. 方法（Method）- 绑定到类/对象的函数
+#    - 实例方法：第一个参数是 self
+#    - 类方法：第一个参数是 cls
+#    - 静态方法：没有 self/cls
+```
+
+##### 7.8.2 方法 vs 函数
+
+| 特性 | 方法 (Method) | 函数 (Function) |
+|------|--------------|-----------------|
+| 归属 | 属于类或对象 | 独立存在 |
+| 调用方式 | `obj.method()` 或 `cls.method()` | `function()` |
+| 第一个参数 | `self` 或 `cls`（自动绑定） | 需要显式传递 |
+| 定义位置 | 类内部 | 类外部（模块级别） |
+| 访问权限 | 可访问实例/类属性 | 不能直接访问实例属性 |
+
+```python
+class MyClass:
+    def instance_method(self):  # 隐式接收 self
+        return "instance"
+    
+    @classmethod
+    def class_method(cls):     # 隐式接收 cls
+        return "class"
+    
+    @staticmethod
+    def static_method():       # 无隐式参数
+        return "static"
+
+# 调用
+obj = MyClass()
+obj.instance_method()   # 需要实例
+MyClass.class_method() # 不需要实例
+MyClass.static_method() # 不需要实例
+```
+
+##### 7.8.3 实例方法、类方法、静态方法对比
+
+```python
+class Circle:
+    pi = 3.14159  # 类属性
+    
+    def __init__(self, radius):
+        self.radius = radius  # 实例属性
+    
+    # 实例方法：可以访问实例和类属性
+    def area(self):
+        return Circle.pi * self.radius ** 2
+    
+    # 类方法：可以访问类属性，不能访问实例属性
+    @classmethod
+    def from_diameter(cls, diameter):
+        return cls(diameter / 2)
+    
+    # 静态方法：与类无关的纯函数
+    @staticmethod
+    def is_valid_radius(radius):
+        return radius > 0
+
+# 使用
+c = Circle(5)
+c.area()                    # 78.54
+Circle.from_diameter(10)   # Circle(radius=5)
+Circle.is_valid_radius(5) # True
+```
+
+##### 7.8.4 callable 对象
+
+```python
+# 任何可以像函数一样调用的都是 callable
+# 函数是 callable
+# 类也是 callable（调用创建实例）
+class Adder:
+    def __init__(self, n):
+        self.n = n
+    
+    def __call__(self, x):
+        """使对象可以像函数一样调用"""
+        return self.n + x
+
+add_5 = Adder(5)
+add_5(10)  # 15（像函数一样调用）
+isinstance(add_5, Callable)  # True
+```
+
+##### 7.8.5 数据类 vs 普通类
+
+```python
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class Point:
+    x: float
+    y: float
+    
+    def distance_to_origin(self):
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+
+# 普通类需要大量样板代码
+class PointOld:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    
+    def __repr__(self):
+        return f"Point(x={self.x}, y={self.y})"
+    
+    def __eq__(self, other):
+        if not isinstance(other, PointOld):
+            return False
+        return self.x == other.x and self.y == other.y
+```
+
+> [!TIP] 何时用 dataclass
+> - 数据容器（类似 Java 的 POJO）
+> - 需要 `__repr__`、`__eq__` 等自动生成
+> - 不需要复杂业务逻辑
+
+##### 7.8.6 一图总结
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        类 (Class)                           │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  类属性 (shared)        Dog.species = "犬科"          │  │
+│  ├───────────────────────────────────────────────────────┤  │
+│  │  类方法 (@classmethod)                                 │  │
+│  │    def from_dog(cls, name): return cls(name)         │  │
+│  ├───────────────────────────────────────────────────────┤  │
+│  │  静态方法 (@staticmethod)                              │  │
+│  │    def is_valid_name(name): return bool(name)        │  │
+│  ├───────────────────────────────────────────────────────┤  │
+│  │  实例方法 (instance)      dog.bark()                   │  │
+│  │    def bark(self): return f"{self.name}叫！"          │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ 实例化
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      对象 (Object)                          │
+│  dog = Dog("旺财", 3)                                       │
+│  - dog.name, dog.age 是实例属性                              │
+│  - dog.species 可以访问类属性                                │
+│  - dog.bark() 调用实例方法                                  │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                      函数 (Function)                        │
+│  def foo(x): return x * 2                                   │
+│  - 不属于任何类                                              │
+│  - 模块级别定义                                              │
+│  - 可以作为参数传递、赋值给变量                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### 7.8.7 Python 一切皆对象
+
+```python
+# 这个概念在 Python 中是真实的
+
+# 1. 类是对象
+print(type(Dog))  # <class 'type'>
+
+# 2. 函数是对象
+def foo(): pass
+print(type(foo))  # <class 'function'>
+
+# 3. 类实例是对象
+dog = Dog("旺财", 3)
+print(type(dog))  # <class '__main__.Dog'>
+
+# 4. 字符串是对象
+s = "hello"
+print(type(s))  # <class 'str'>
+
+# 5. 甚至类本身也是 type 的实例
+print(isinstance(Dog, type))  # True
+```
+
+> [!TIP] 一等公民的具体表现
+> 在 Python 中，函数、类、甚至类型都是对象，可以：
+> - 赋值给变量：`f = foo`
+> - 作为参数传递：`map(f, items)`
+> - 作为返回值：`return foo`
+> - 存储在数据结构中：`[foo, bar]`
+
+---
+
+### 8. 输入输出
 
 ### 8. 输入输出
 - input() 函数
