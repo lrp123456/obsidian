@@ -573,31 +573,701 @@ prompt = (
 5. **bytes 和 str 的区别？** - bytes 是字节序列，str 是 Unicode 字符串
 
 ### 5. 数据结构
+
+> [!TIP] Java 开发者视角
+> Python 的数据结构与 Java 有显著差异：
+> - **List** ≈ `ArrayList`，但更强大（可存混合类型）
+> - **Tuple** ≈ 不可变的 List，Java 无等价类型
+> - **Set** ≈ `HashSet`
+> - **Dict** ≈ `HashMap`
+
+---
+
 #### 5.1 列表（List）
-- 创建与访问
-- 增删改查操作
-- 列表方法（append, extend, insert, remove, pop, sort, reverse 等）
-- 列表推导式
-- 列表切片
+
+##### 5.1.1 创建与访问
+
+```python
+# 基本创建
+empty = []                      # 空列表
+numbers = [1, 2, 3, 4, 5]       # 整数列表
+mixed = [1, "hello", 3.14, True]  # 混合类型（Python 允许，Java 不允许）
+
+# list() 构造函数
+chars = list("hello")           # ['h', 'e', 'l', 'l', 'o']
+items = list(range(5))          # [0, 1, 2, 3, 4]
+items = list(range(1, 6))      # [1, 2, 3, 4, 5]
+items = list(range(0, 10, 2))  # [0, 2, 4, 6, 8]
+
+# 列表乘法（重复）
+zeros = [0] * 5                 # [0, 0, 0, 0, 0]
+pattern = [1, 2] * 3           # [1, 2, 1, 2, 1, 2]
+
+# 索引访问（0-based）
+numbers = [10, 20, 30, 40, 50]
+numbers[0]     # 10（第一个）
+numbers[4]     # 50（最后一个）
+numbers[-1]    # 50（倒数第一）
+numbers[-2]    # 40（倒数第二）
+
+# 切片访问
+numbers[1:4]   # [20, 30, 40]（start:end，不含 end）
+numbers[:3]    # [10, 20, 30]（从头开始）
+numbers[3:]     # [40, 50]（到末尾）
+numbers[::2]   # [10, 30, 50]（步长 2）
+numbers[::-1]   # [50, 40, 30, 20, 10]（反转）
+```
+
+> [!WARNING] 列表可变
+> 列表是**可变**的，可以直接修改：`numbers[0] = 100`
+
+**Java 对比**：
+```java
+// Java - 必须声明类型
+List<Integer> numbers = new ArrayList<>(Arrays.asList(1, 2, 3));
+// 或 Java 9+
+List.of(1, 2, 3);  // 不可变
+```
+
+##### 5.1.2 增删改查操作
+
+```python
+numbers = [1, 2, 3]
+
+# 增 - 在末尾添加
+numbers.append(4)      # [1, 2, 3, 4]
+numbers.append([5, 6]) # [1, 2, 3, 4, [5, 6]]（整体作为一个元素）
+
+# 增 - 在指定位置插入
+numbers.insert(0, 0)   # [0, 1, 2, 3, 4]（在索引 0 插入）
+numbers.insert(2, 99)  # [0, 1, 99, 2, 3, 4]
+
+# 增 - 扩展列表
+numbers.extend([7, 8])  # [0, 1, 99, 2, 3, 4, 7, 8]
+# 区别于 append
+[1, 2].append([3, 4])   # [1, 2, [3, 4]]
+[1, 2].extend([3, 4])   # [1, 2, 3, 4]
+
+# 删 - 按值删除
+numbers.remove(99)      # 删除第一个匹配的值
+# numbers.remove(100)   # ValueError: list.remove(x) - 不存在会报错
+
+# 删 - 按索引删除
+numbers.pop()           # 删除最后一个，返回被删除的值
+numbers.pop(0)          # 删除第一个，返回被删除的值
+del numbers[0]          # 删除索引 0 的元素（不返回）
+
+# 删 - 清空
+numbers.clear()         # []
+
+# 改
+numbers = [1, 2, 3, 4]
+numbers[0] = 100        # [100, 2, 3, 4]（按索引修改）
+numbers[1:3] = [20, 30] # [100, 20, 30, 4]（切片修改）
+
+# 查
+numbers = [1, 2, 3, 4, 3, 3]
+numbers.index(3)        # 2（第一个匹配的索引）
+numbers.index(3, 4)     # 4（从索引 4 开始查找）
+numbers.count(3)        # 3（计数）
+3 in numbers            # True（成员判断）
+```
+
+##### 5.1.3 列表方法详解
+
+```python
+# sort() - 排序（原地修改）
+numbers = [3, 1, 4, 1, 5, 9, 2, 6]
+numbers.sort()          # [1, 1, 2, 3, 4, 5, 6, 9]
+numbers.sort(reverse=True)  # [9, 6, 5, 4, 3, 2, 1, 1]
+
+# 按key排序
+words = ["banana", "apple", "cherry"]
+words.sort(key=len)    # 按长度排序：['apple', 'banana', 'cherry']
+words.sort(key=lambda x: x[-1])  # 按最后一个字母排序
+
+# sorted() - 返回新列表（不修改原列表）
+numbers = [3, 1, 4, 1, 5]
+sorted(numbers)        # [1, 1, 3, 4, 5]
+numbers                 # [3, 1, 4, 1, 5]（原列表不变）
+
+# reverse() - 反转（原地修改）
+numbers.reverse()       # [5, 1, 4, 1, 3]
+reversed(numbers)       # 返回迭代器，需要 list() 转换
+
+# copy() - 浅拷贝
+original = [1, [2, 3], 4]
+copied = original.copy()
+copied[1].append(99)   # original 也会被修改！（浅拷贝问题）
+```
+
+##### 5.1.4 列表推导式（重要！Pythonic）
+
+```python
+# 基本语法：[表达式 for item in iterable]
+squares = [x ** 2 for x in range(10)]  # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+# 带条件：[表达式 for item in iterable if 条件]
+evens = [x for x in range(10) if x % 2 == 0]  # [0, 2, 4, 6, 8]
+
+# 多重循环
+pairs = [(x, y) for x in [1, 2] for y in [3, 4]]
+# [(1, 3), (1, 4), (2, 3), (2, 4)]
+
+# 条件表达式（类似三元运算符）
+labels = ["偶数" if x % 2 == 0 else "奇数" for x in range(5)]
+# ['偶数', '奇数', '偶数', '奇数', '偶数']
+
+# 嵌套列表推导式
+matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+flattened = [num for row in matrix for num in row]
+# [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# 字典推导式转列表
+word = "hello"
+char_count = {c: word.count(c) for c in set(word)}
+# {'h': 1, 'e': 1, 'l': 2, 'o': 1}
+```
+
+> [!TIP] Agent 开发场景
+> 列表推导式是处理 LLM 返回的 JSON 列表的利器：
+> ```python
+> responses = ["北京", "上海", "广州", "深圳"]
+> items = [f"{i+1}. {city}" for i, city in enumerate(responses)]
+> # ['1. 北京', '2. 上海', '3. 广州', '4. 深圳']
+> ```
+
+##### 5.1.5 列表的"坑"
+
+```python
+# 坑1：浅拷贝问题
+a = [[1, 2], [3, 4]]
+b = a[:]          # 浅拷贝
+b[0].append(99)  # a 也会变！
+# 正确深拷贝：
+import copy
+b = copy.deepcopy(a)
+
+# 坑2：列表相乘初始化
+zeros = [[0] * 3 for _ in range(3)]  # 正确！每个都是独立列表
+wrong = [[0] * 3] * 3                # 错误！所有行指向同一列表
+
+# 坑3：修改列表时的迭代问题
+# 不要在遍历列表时直接删除元素
+numbers = [1, 2, 2, 3, 2, 4]
+# 错误：for num in numbers: if num == 2: numbers.remove(num)
+# 正确：
+numbers = [x for x in numbers if x != 2]  # [1, 3, 4]
+```
+
+---
 
 #### 5.2 元组（Tuple）
-- 创建与访问
-- 不可变性
-- 解包操作
-- 命名元组（namedtuple）
+
+##### 5.2.1 创建与访问
+
+```python
+# 基本创建
+empty = ()                # 空元组
+single = (42,)            # 单元素元组（必须加逗号！）
+point = (3, 4)            # 二元组
+colors = ("red", "green", "blue")
+
+# tuple() 构造函数
+chars = tuple("hello")    # ('h', 'e', 'l', 'l', 'o')
+items = tuple([1, 2, 3]) # (1, 2, 3)
+
+# 访问（与列表相同）
+colors = ("red", "green", "blue")
+colors[0]     # 'red'
+colors[-1]    # 'blue'
+colors[1:3]   # ('green', 'blue')
+```
+
+> [!WARNING] 元组不可变
+> 元组创建后**不能修改**：
+> ```python
+> t = (1, 2, 3)
+> t[0] = 100  # TypeError!
+> ```
+
+##### 5.2.2 不可变性的意义
+
+```python
+# 1. 作为字典的键
+locations = {
+    (35.6762, 139.6503): "Tokyo",
+    (40.7128, -74.0060): "New York",
+}
+
+# 2. 函数返回多个值（Python 惯用方式）
+def get_stats(numbers):
+    return (min(numbers), max(numbers), sum(numbers)/len(numbers))
+
+min_val, max_val, avg_val = get_stats([1, 2, 3, 4, 5])
+
+# 3. 格式化字符串（安全）
+info = ("Alice", 30, "Engineer")
+print("%s, age %d, works as %s" % info)
+
+# 4. 集合的元素（列表不能作为 set 的元素）
+valid = {(1, 2), (3, 4), (5, 6)}  # OK
+# invalid = {[1, 2], [3, 4]}      # TypeError!
+```
+
+##### 5.2.3 解包操作（重要！）
+
+```python
+# 基本解包
+point = (3, 4, 5)
+x, y, z = point  # x=3, y=4, z=5
+
+# * 解包剩余部分
+head, *middle, tail = [1, 2, 3, 4, 5]
+# head = 1, middle = [2, 3, 4], tail = 5
+
+first, *_, last = [10, 20, 30, 40, 50]
+# first = 10, last = 50, _ 丢弃中间值
+
+# 交换变量（无需 temp）
+a, b = 1, 2
+a, b = b, a  # a=2, b=1
+
+# 函数返回值解包
+def get_user():
+    return ("Alice", 30, "alice@email.com")
+
+name, age, email = get_user()
+
+# 解包与 * 的组合
+records = [("Alice", 30), ("Bob", 25), ("Charlie", 35)]
+names, ages = zip(*records)
+# names = ('Alice', 'Bob', 'Charlie')
+# ages = (30, 25, 35)
+```
+
+**Java 对比**：
+```java
+// Java 没有元组，只能用数组或自定义类
+String[] user = {"Alice", "30"};
+String name = user[0];
+```
+
+##### 5.2.4 命名元组（namedtuple）
+
+```python
+from collections import namedtuple
+
+# 定义命名元组类型
+Point = namedtuple('Point', ['x', 'y', 'z'])
+User = namedtuple('User', 'name age email')  # 空格分隔也可以
+
+# 创建实例
+p = Point(1, 2, 3)
+u = User("Alice", 30, "alice@email.com")
+
+# 访问方式 1：属性
+p.x           # 1
+p.y           # 2
+u.name        # 'Alice'
+
+# 访问方式 2：索引
+p[0]          # 1
+u[0]          # 'Alice'
+
+# 解包
+x, y, z = p
+
+# 转换为字典
+p._asdict()   # {'x': 1, 'y': 2, 'z': 3}
+
+# 修改字段（返回新实例）
+p._replace(x=100)  # Point(x=100, y=2, z=3)
+```
+
+> [!TIP] namedtuple 适用场景
+> 当你需要"轻量级类"且**不可变**时使用：
+> - 数据传输对象（DTO）
+> - 配置对象
+> - 函数多返回值（比普通元组更清晰）
+
+##### 5.2.5 元组 vs 列表
+
+| 特性 | 元组 | 列表 |
+|------|------|------|
+| 可变性 | 不可变 | 可变 |
+| 性能 | 更快、更省内存 | 稍慢 |
+| 用途 | 固定数据、函数返回值 | 动态集合 |
+| 作为 dict 键 | ✅ 可以 | ❌ 不可以 |
+| 作为 set 元素 | ✅ 可以 | ❌ 不可以 |
+
+---
 
 #### 5.3 集合（Set）
-- 创建与特点（无序、唯一）
-- 集合运算（交集、并集、差集、对称差）
-- 集合方法
-- 集合推导式
+
+##### 5.3.1 创建与特点
+
+```python
+# 基本创建
+empty = set()             # 空集合（不能用 {}，那是 dict）
+fruits = {"apple", "banana", "cherry"}
+numbers = {1, 2, 3, 4, 5}
+
+# set() 构造函数
+chars = set("hello")      # {'h', 'e', 'l', 'o'}（去重）
+items = set([1, 2, 2, 3]) # {1, 2, 3}
+
+# 特点：无序、唯一
+s = {3, 1, 2, 3, 1, 2}
+print(s)  # {1, 2, 3}（顺序不确定，但去重）
+```
+
+> [!WARNING] 空集合
+> `{}` 是空字典，不是空集合。创建空集合必须用 `set()`。
+
+**Java 对比**：
+```java
+// Java
+Set<String> fruits = new HashSet<>(Arrays.asList("apple", "banana"));
+```
+
+##### 5.3.2 集合运算
+
+```python
+A = {1, 2, 3, 4}
+B = {3, 4, 5, 6}
+
+# 并集
+A | B          # {1, 2, 3, 4, 5, 6}
+A.union(B)     # 同上
+A |= B         # 就地修改 A
+
+# 交集
+A & B          # {3, 4}
+A.intersection(B)  # 同上
+A &= B         # 就地修改 A
+
+# 差集（A 有 B 没有）
+A - B          # {1, 2}
+A.difference(B)   # 同上
+A -= B         # 就地修改 A
+
+# 对称差（AB 互斥的部分）
+A ^ B          # {1, 2, 5, 6}
+A.symmetric_difference(B)  # 同上
+A ^= B         # 就地修改 A
+
+# 子集判断
+{1, 2} <= {1, 2, 3}   # True（子集）
+{1, 2} < {1, 2, 3}    # True（真子集）
+{1, 2, 3} >= {1, 2}   # True（超集）
+{1, 2, 3} > {1, 2}    # True（真超集）
+
+# 不相交
+{1, 2}.isdisjoint({3, 4})  # True
+{1, 2}.isdisjoint({2, 3})  # False
+```
+
+##### 5.3.3 集合方法
+
+```python
+s = {1, 2, 3}
+
+# 增
+s.add(4)       # {1, 2, 3, 4}
+s.update([5, 6])  # {1, 2, 3, 4, 5, 6}（批量添加）
+
+# 删
+s.remove(3)    # {1, 2, 4}（不存在会报错 KeyError）
+s.discard(10)  # {}（不存在不会报错）
+s.pop()        # 随机删除一个元素并返回
+
+# 查（成员判断）
+3 in s         # True（主要用途）
+
+# 其他
+len(s)         # 3
+s.copy()       # 浅拷贝
+s.clear()      # set()
+```
+
+##### 5.3.4 集合推导式
+
+```python
+# 基本语法：{表达式 for item in iterable}
+squares = {x ** 2 for x in range(6)}  # {0, 1, 4, 9, 16, 25}
+
+# 带条件
+evens = {x for x in range(10) if x % 2 == 0}  # {0, 2, 4, 6, 8}
+
+# 交集推导式
+a = {1, 2, 3, 4}
+b = {3, 4, 5, 6}
+common = {x for x in a if x in b}  # {3, 4}
+```
+
+##### 5.3.5 集合的"坑"
+
+```python
+# 坑1：集合元素必须是可哈希的（不可变）
+# OK
+{1, "hello", (1, 2)}      # 可以
+# Error
+{{1, 2}, {3, 4}}          # TypeError: unhashable type 'set'
+{[1, 2], [3, 4]}          # TypeError: unhashable type 'list'
+
+# 坑2：集合随机删除
+s = {1, 2, 3, 4, 5}
+s.pop()   # 不知道删除哪个！生产代码避免用 pop()
+```
+
+> [!TIP] Agent 开发场景
+> 集合用于去重和成员判断：
+> ```python
+> # 去除重复的 LLM 输出
+> responses = ["苹果", "香蕉", "苹果", "橙子", "香蕉"]
+> unique = list(set(responses))  # ['苹果', '香蕉', '橙子']
+> ```
+
+---
 
 #### 5.4 字典（Dict）
-- 创建与访问
-- 增删改查操作
-- 字典方法（keys, values, items, get, update, pop 等）
-- 字典推导式
-- 嵌套字典
+
+##### 5.4.1 创建与访问
+
+```python
+# 基本创建
+empty = {}                # 空字典
+user = {"name": "Alice", "age": 30}
+config = {"theme": "dark", "lang": "zh"}
+
+# dict() 构造函数
+pairs = [("a", 1), ("b", 2)]
+d = dict(pairs)           # {'a': 1, 'b': 2}
+
+# 关键字参数
+d = dict(name="Alice", age=30)  # {'name': 'Alice', 'age': 30}
+
+# fromkeys - 批量创建（值相同）
+keys = ["a", "b", "c"]
+d = dict.fromkeys(keys, 0)  # {'a': 0, 'b': 0, 'c': 0}
+
+# 访问（键不存在会报错）
+user = {"name": "Alice", "age": 30}
+user["name"]          # 'Alice'
+user["age"]           # 30
+# user["email"]        # KeyError
+
+# 安全访问
+user.get("name")       # 'Alice'
+user.get("email")      # None（不报错）
+user.get("email", "N/A")  # 'N/A'（默认值）
+```
+
+> [!WARNING] 字典键的要求
+> 键必须是**可哈希**的（不可变类型）：
+> - ✅ `str`, `int`, `float`, `tuple`, `bytes`
+> - ❌ `list`, `dict`, `set`
+
+**Java 对比**：
+```java
+// Java
+Map<String, Object> user = new HashMap<>();
+user.put("name", "Alice");
+user.get("name");  // 返回 Object，需强转
+```
+
+##### 5.4.2 增删改查操作
+
+```python
+user = {"name": "Alice", "age": 30}
+
+# 增/改
+user["email"] = "alice@email.com"  # 新增
+user["age"] = 31                    # 修改
+
+# 批量更新
+user.update({"city": "Beijing", "age": 32})
+# 相同键会覆盖：user = {"name": "Alice", "age": 32, "email": "alice@email.com", "city": "Beijing"}
+
+# 删
+del user["email"]          # 删除指定键
+user.pop("age")            # 删除并返回值
+user.popitem()             # 删除最后一个（Python 3.7+）
+user.clear()               # 清空
+
+# 查
+"name" in user            # True（键存在判断）
+user.keys()               # dict_keys(['name', 'city'])
+user.values()             # dict_values(['Alice', 'Beijing'])
+user.items()              # dict_items([('name', 'Alice'), ('city', 'Beijing')])
+
+# 遍历
+for key in user:
+    print(key, user[key])
+
+for key, value in user.items():
+    print(f"{key}: {value}")
+```
+
+##### 5.4.3 字典方法详解
+
+```python
+# setdefault - 只在键不存在时设置
+user = {"name": "Alice"}
+user.setdefault("age", 25)    # 25（新增）
+user.setdefault("name", "Bob") # 'Alice'（已存在，返回原值）
+
+# 复制
+user_copy = user.copy()       # 浅拷贝
+import copy
+user_deep = copy.deepcopy(user)  # 深拷贝
+
+# 键值迭代顺序（Python 3.7+ 保证插入顺序）
+d = {}
+d["z"] = 1
+d["a"] = 2
+d["m"] = 3
+print(list(d.keys()))  # ['z', 'a', 'm']（按插入顺序）
+```
+
+##### 5.4.4 字典推导式
+
+```python
+# 基本语法：{key: value for item in iterable}
+squares = {x: x**2 for x in range(5)}  # {0: 0, 1: 1, 2: 4, 3: 9, 4: 16}
+
+# 带条件
+nums = [1, 2, 3, 4, 5]
+even_squares = {x: x**2 for x in nums if x % 2 == 0}  # {2: 4, 4: 16}
+
+# 键值互换
+original = {"a": 1, "b": 2, "c": 3}
+inverted = {v: k for k, v in original.items()}  # {1: 'a', 2: 'b', 3: 'c'}
+
+# 合并两个列表
+keys = ["name", "age", "city"]
+values = ["Alice", 30, "Beijing"]
+data = {k: v for k, v in zip(keys, values)}  # {'name': 'Alice', 'age': 30, 'city': 'Beijing'}
+```
+
+> [!TIP] Agent 开发场景
+> 字典是处理 JSON 的核心：
+> ```python
+> # LLM 返回的 JSON
+> response = {"content": "The capital of France is Paris.", "tokens": 15}
+> 
+> # 构建 prompt 变量
+> prompt_vars = {
+>     "user_name": "Alice",
+>     "response": response["content"],
+>     "tokens": response.get("tokens", 0)
+> }
+> ```
+
+##### 5.4.5 嵌套字典
+
+```python
+# 嵌套结构
+company = {
+    "name": "TechCorp",
+    "departments": {
+        "engineering": {
+            "headcount": 50,
+            "members": ["Alice", "Bob"]
+        },
+        "sales": {
+            "headcount": 20,
+            "members": ["Charlie", "David"]
+        }
+    }
+}
+
+# 访问嵌套值
+company["departments"]["engineering"]["headcount"]  # 50
+
+# 安全访问（链式 get）
+company.get("departments", {}).get("engineering", {}).get("headcount", 0)
+
+# 使用 setdefault 安全添加
+company.setdefault("departments", {}).setdefault("hr", {"headcount": 10})
+```
+
+##### 5.4.6 defaultdict（更安全的字典）
+
+```python
+from collections import defaultdict
+
+# 普通字典的坑
+# counts = {}
+# for word in ["apple", "banana", "apple"]:
+#     counts[word] += 1  # KeyError!
+
+# defaultdict 解决方案
+counts = defaultdict(int)  # 默认值为 0
+for word in ["apple", "banana", "apple"]:
+    counts[word] += 1
+# counts = {'apple': 2, 'banana': 1}
+
+# 其他默认值类型
+dd_list = defaultdict(list)
+dd_list["fruits"].append("apple")  # {'fruits': ['apple']}
+
+dd_set = defaultdict(set)
+dd_set["evens"].add(2)  # {'evens': {2}}
+
+# 复杂结构
+tree = defaultdict(lambda: defaultdict(int))
+tree["2024"]["sales"] += 100
+```
+
+##### 5.4.7 字典的"坑"
+
+```python
+# 坑1：字典键大小写敏感
+d = {"Name": "Alice"}
+d["name"]   # KeyError！（大小写不同）
+
+# 坑2：修改字典时不要修改大小
+d = {1: "a", 2: "b"}
+for key in d:
+    if key == 1:
+        del d[key]  # RuntimeError: dictionary changed size during iteration
+
+# 正确做法
+to_delete = [k for k in d if k == 1]
+for k in to_delete:
+    del d[k]
+
+# 坑3：字典比较（值比较，非键值比较）
+{"a": 1} == {"a": 1}   # True
+{"a": 1} == {"b": 1}   # False（键不同）
+```
+
+---
+
+#### 📋 数据结构对比速查表
+
+| 操作 | List | Tuple | Set | Dict |
+|------|------|-------|-----|------|
+| 创建 | `[1,2]` / `list()` | `(1,2)` / `tuple()` | `{1,2}` / `set()` | `{"a":1}` / `dict()` |
+| 可变 | ✅ | ❌ | ✅ | ✅ |
+| 有序 | ✅ (3.7+) | ✅ | ❌ | ✅ (3.7+) |
+| 索引访问 | ✅ | ✅ | ❌ | ✅ by key |
+| 去重 | ❌ | ❌ | ✅ | ❌ |
+| 作为键 | ❌ | ✅ | ❌ | ❌ |
+| 作为元素 | ✅ | ✅ | ❌ (可哈希) | ❌ |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 列表和元组的区别？** - 列表可变、元组不可变（决定用途）
+2. **浅拷贝 vs 深拷贝？** - 浅拷贝只拷贝引用，深拷贝递归拷贝所有层级
+3. **字典的键有什么限制？** - 必须可哈希（不可变类型）
+4. **Python 3.7+ 字典有什么特性？** - 保持插入顺序
+5. **什么时候用 set 而不是 list？** - 需要去重或快速成员判断时（O(1) vs O(n)）
+6. **什么是 defaultdict？** - 提供默认值的字典，避免 KeyError
 
 ### 6. 流程控制
 #### 6.1 条件语句

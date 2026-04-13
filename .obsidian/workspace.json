@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Python学习.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 280.5
   },
   "right": {
     "id": "b890afd5ebbd5f52",
