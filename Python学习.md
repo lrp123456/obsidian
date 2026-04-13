@@ -1270,19 +1270,494 @@ for k in to_delete:
 6. **什么是 defaultdict？** - 提供默认值的字典，避免 KeyError
 
 ### 6. 流程控制
+
+> [!TIP] Java 开发者视角
+> Python 的流程控制与 Java 类似，但语法更简洁：
+> - 没有 `switch`，用 `elif` 链替代
+> - `for` 循环是 `for-each` 风格（迭代器）
+> - 有独特的 `else` 子句（循环正常结束时执行）
+
+---
+
 #### 6.1 条件语句
-- if 语句
-- if-else 语句
-- if-elif-else 语句
-- 条件表达式（三元运算符）
+
+##### 6.1.1 if 语句
+
+```python
+# 基本语法（注意缩进！）
+age = 18
+if age >= 18:
+    print("成年人")  # 4空格缩进
+
+# 多行条件
+if age >= 18 and age < 65:
+    print("劳动年龄")
+```
+
+**Java 对比**：
+```java
+// Java - 用大括号
+if (age >= 18) {
+    System.out.println("成年人");
+}
+```
+
+##### 6.1.2 if-else 语句
+
+```python
+age = 16
+
+if age >= 18:
+    print("成年人")
+else:
+    print("未成年")
+
+# 单行 if-else（表达式形式）
+status = "成年人" if age >= 18 else "未成年"
+```
+
+> [!TIP] Python 没有三元运算符 `? :`
+> Python 用 `if-else` 表达式替代：
+> ```python
+> # Java: String status = age >= 18 ? "成年人" : "未成年";
+> # Python:
+> status = "成年人" if age >= 18 else "未成年"
+> ```
+
+##### 6.1.3 if-elif-else 链
+
+```python
+score = 85
+
+if score >= 90:
+    grade = "A"
+elif score >= 80:
+    grade = "B"
+elif score >= 70:
+    grade = "C"
+elif score >= 60:
+    grade = "D"
+else:
+    grade = "F"
+
+# 可以只有一个 if
+if score >= 90:
+    grade = "A"
+```
+
+> [!WARNING] Python 没有 switch
+> Java 的 `switch` 在 Python 中用 `elif` 链替代。
+
+##### 6.1.4 条件表达式（Expression vs Statement）
+
+```python
+# if-else 是语句（不返回值）
+if x > 0:
+    sign = "positive"
+else:
+    sign =non-positive"
+
+# 条件表达式是表达式（返回值）
+sign = "positive" if x > 0 else "non-positive"
+
+# 嵌套条件表达式（谨慎使用）
+age_group = (
+    "儿童" if age < 12 else
+    "青少年" if age < 18 else
+    "成年人" if age < 65 else
+    "老年人"
+)
+```
+
+##### 6.1.5 短路求值
+
+```python
+# and 短路
+result = False and something()  # something() 不执行
+# or 短路
+result = True or something()    # something() 不执行
+
+# 常见用法：默认值
+name = user_input or "Anonymous"
+```
+
+##### 6.1.6 条件判断的真假值
+
+```python
+# Falsy 值（判断为 False）
+bool(None)      # False
+bool(0)         # False
+bool("")        # False
+bool([])        # False
+bool({})        # False
+bool(set())     # False
+
+# Truthy 值（其他）
+bool("hello")   # True
+bool([0])       # True（即使列表只有一个0）
+bool({"a": 1})  # True
+
+# 面试题：[] == False ?
+[] == False     # False！（不是 False）
+not []          # True（但这是 not，不是 ==）
+```
+
+---
 
 #### 6.2 循环语句
-- while 循环
-- for 循环
-- range() 函数
-- break、continue、pass
-- 循环的 else 子句
-- 循环嵌套
+
+##### 6.2.1 while 循环
+
+```python
+# 基本语法
+count = 0
+while count < 5:
+    print(count)
+    count += 1
+
+# while-else（循环正常结束时执行 else）
+count = 0
+while count < 3:
+    print(count)
+    count += 1
+else:
+    print("循环正常结束")  # count == 3 时执行
+
+# break 退出时不执行 else
+count = 0
+while count < 3:
+    if count == 2:
+        break
+    count += 1
+else:
+    print("不会执行")
+```
+
+> [!WARNING] 死循环
+> ```python
+> # 常见错误：忘记更新条件
+> while True:  # 死循环！
+>     print("会一直执行")
+> ```
+
+##### 6.2.2 for 循环（迭代器）
+
+```python
+# 基本语法：for item in iterable
+fruits = ["apple", "banana", "cherry"]
+for fruit in fruits:
+    print(fruit)
+
+# Java 的增强 for 循环类似
+# Java: for (String fruit : fruits) { System.out.println(fruit); }
+```
+
+**Python for vs Java for**：
+```java
+// Java - 两种 for
+for (int i = 0; i < 5; i++) { ... }  // 传统索引循环
+for (String item : list) { ... }      // for-each
+
+// Python - 统一用迭代器
+for i in range(5): ...                 # 替代索引循环
+for item in items: ...                 # 等同于 for-each
+```
+
+##### 6.2.3 range() 函数
+
+```python
+# range(stop) - 从 0 开始
+list(range(5))        # [0, 1, 2, 3, 4]
+
+# range(start, stop)
+list(range(1, 6))     # [1, 2, 3, 4, 5]
+
+# range(start, stop, step)
+list(range(0, 10, 2)) # [0, 2, 4, 6, 8]
+list(range(10, 0, -1)) # [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+
+# 正序
+for i in range(5):
+    print(i)  # 0, 1, 2, 3, 4
+
+# 逆序
+for i in range(4, -1, -1):
+    print(i)  # 4, 3, 2, 1, 0
+```
+
+> [!TIP] range 内存效率
+> `range(1000000)` 不会生成一百万个数字，而是返回一个惰性迭代器，占用很少内存。
+
+##### 6.2.4 break、continue、pass
+
+```python
+# break - 跳出整个循环
+for i in range(10):
+    if i == 5:
+        break
+    print(i)  # 0, 1, 2, 3, 4
+
+# continue - 跳过本次迭代
+for i in range(5):
+    if i == 2:
+        continue
+    print(i)  # 0, 1, 3, 4（跳过2）
+
+# pass - 占位符（什么都不做）
+for i in range(5):
+    if i == 2:
+        pass  # TODO: 以后处理
+    else:
+        print(i)
+```
+
+> [!WARNING] pass vs continue
+> `pass` 什么都不做，继续执行；`continue` 跳过本次循环剩余代码：
+> ```python
+> # pass - 打印所有数字
+> for i in range(3):
+>     if i == 1:
+>         pass
+>     print(i)  # 0, 1, 2
+>
+> # continue - 跳过1
+> for i in range(3):
+>     if i == 1:
+>         continue
+>     print(i)  # 0, 2
+> ```
+
+##### 6.2.5 循环的 else 子句（Python 独有！）
+
+```python
+# else 在循环正常结束时执行
+for i in range(3):
+    print(i)
+else:
+    print("循环完成")  # 执行
+
+# break 退出时不执行 else
+for i in range(3):
+    if i == 1:
+        break
+    print(i)
+else:
+    print("不会执行")  # 不执行
+
+# 典型用法：查找
+numbers = [1, 3, 5, 7]
+target = 6
+
+for n in numbers:
+    if n == target:
+        print(f"找到 {target}")
+        break
+else:
+    print(f"未找到 {target}")  # 循环正常结束才执行
+```
+
+> [!TIP] else 的语义
+> Python 的循环 else 可以理解为 "nobreak"——当循环**没有**被 break 退出时执行。
+
+##### 6.2.6 循环嵌套
+
+```python
+# 打印九九乘法表
+for i in range(1, 10):
+    for j in range(1, i + 1):
+        print(f"{j}×{i}={i*j}", end="\t")
+    print()  # 换行
+
+# 跳出多层循环（Python 没有 label）
+for i in range(5):
+    for j in range(5):
+        if j == 3:
+            break  # 只跳出内层
+        print(i, j)
+```
+
+**Java 对比**：
+```java
+// Java 可以用 label 跳出多层循环
+outer:
+for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < 5; j++) {
+        if (j == 3) break outer;  // 跳出两层
+    }
+}
+
+// Python 只能 break 一层，或用异常/标志位
+```
+
+##### 6.2.7 enumerate - 带索引的迭代
+
+```python
+fruits = ["apple", "banana", "cherry"]
+
+# 方法1：手动索引
+for i in range(len(fruits)):
+    print(f"{i}: {fruits[i]}")
+
+# 方法2：enumerate（推荐）
+for i, fruit in enumerate(fruits, start=1):
+    print(f"{i}: {fruit}")
+# 1: apple
+# 2: banana
+# 3: cherry
+```
+
+##### 6.2.8 zip - 并行迭代
+
+```python
+names = ["Alice", "Bob", "Charlie"]
+ages = [30, 25, 35]
+
+# 并行遍历
+for name, age in zip(names, ages):
+    print(f"{name}: {age}")
+# Alice: 30
+# Bob: 25
+# Charlie: 35
+
+# 不等长时取最短
+names = ["Alice", "Bob"]
+ages = [30, 25, 35, 40]
+for name, age in zip(names, ages):
+    print(f"{name}: {age}")  # 只迭代到最短长度
+
+# 最短长度后继续（Python 3.10+）
+for name, age in itertools.zip_longest(names, ages, fillvalue="未知"):
+    print(f"{name}: {age}")
+```
+
+##### 6.2.9 列表推导式中的 if
+
+```python
+# 带条件的列表推导式
+evens = [x for x in range(10) if x % 2 == 0]
+# [0, 2, 4, 6, 8]
+
+# if-else 表达式（放前面）
+labels = ["偶数" if x % 2 == 0 else "奇数" for x in range(5)]
+# ['偶数', '奇数', '偶数', '奇数', '偶数']
+```
+
+##### 6.2.10 循环性能技巧
+
+```python
+# ❌ 慢：在循环中拼接字符串
+result = ""
+for i in range(1000):
+    result += str(i)
+
+# ✅ 快：使用 join
+parts = []
+for i in range(1000):
+    parts.append(str(i))
+result = "".join(parts)
+
+# ✅ 最快：列表推导式
+result = "".join(str(i) for i in range(1000))
+
+# ❌ 慢：重复访问长度
+for i in range(len(items)):
+    if i < len(items):  # 每次都计算
+
+# ✅ 快：缓存长度
+n = len(items)
+for i in range(n):
+    if i < n:  # 使用缓存值
+```
+
+---
+
+#### 6.3 迭代工具实战
+
+##### 6.3.1 itertools 模块
+
+```python
+import itertools
+
+# cycle - 无限循环
+counter = 0
+for item in itertools.cycle(["a", "b", "c"]):
+    print(item)
+    counter += 1
+    if counter == 5:  # 手动停止
+        break
+# a, b, c, a, b
+
+# count - 无限计数
+for i in itertools.count(start=0, step=2):
+    print(i)
+    if i > 10:
+        break
+# 0, 2, 4, 6, 8, 10, 12
+
+# chain - 连接多个迭代器
+for item in itertools.chain([1, 2], ["a", "b"], [3, 4]):
+    print(item)
+# 1, 2, a, b, 3, 4
+
+# islice - 切片迭代器
+for item in itertools.islice(range(10), 2, 8, 2):
+    print(item)
+# 2, 4, 6
+```
+
+##### 6.3.2 生成器表达式（惰性求值）
+
+```python
+# 列表推导式（立即求值）
+squares = [x**2 for x in range(1000000)]  # 立即占用大量内存
+
+# 生成器表达式（惰性求值）
+squares_gen = (x**2 for x in range(1000000))  # 占用很少内存
+for sq in squares_gen:
+    print(sq)
+    if sq > 100:
+        break
+```
+
+---
+
+#### 📋 流程控制速查表
+
+| 关键字 | 作用 |
+|--------|------|
+| `if/elif/else` | 条件分支 |
+| `for` | 迭代循环 |
+| `while` | 条件循环 |
+| `break` | 跳出当前循环 |
+| `continue` | 跳过本次迭代 |
+| `pass` | 空操作占位符 |
+| `else` (循环后) | 循环正常结束时执行 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 的 `for` 和 Java 的 `for` 有什么区别？**
+   - Python 的 `for` 是 for-each，Java 有两种
+   - Python 用 `range()` 模拟索引循环
+
+2. **Python 有没有 switch？**
+   - 没有，用 `elif` 链替代
+
+3. **循环的 `else` 什么时候执行？**
+   - 循环正常结束（没有被 break）时执行
+
+4. **什么是短路求值？**
+   - `and`/`or` 在能确定结果时不再计算右侧表达式
+
+5. **Falsy 值有哪些？**
+   - `None`, `0`, `""`, `[]`, `{}`, `set()`
+
+6. **`pass` 和 `continue` 的区别？**
+   - `pass` 什么都不做，继续执行下一行
+   - `continue` 跳过本次循环剩余代码
+
+---
 
 ### 7. 函数基础
 - 函数定义与调用
