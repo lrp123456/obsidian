@@ -134,12 +134,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "欢迎.md",
+                "file": "Python学习.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "欢迎 的出链列表"
+              "title": "Python学习 的出链列表"
             }
           },
           {
@@ -197,7 +197,7 @@
             }
           }
         ],
-        "currentTab": 5
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -216,7 +216,7 @@
       "bases:新建数据库": false
     }
   },
-  "active": "da47d81959f5fef7",
+  "active": "7ddc2a667677507f",
   "lastOpenFiles": [
     "AGENTS.md",
     "skills/python-tutor.md",
