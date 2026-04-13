@@ -2617,6 +2617,478 @@ print(isinstance(Dog, type))  # True
 
 ---
 
+#### 7.9 特殊方法（魔术方法/Dunder Methods）
+
+> [!TIP] 什么是魔术方法？
+> 魔术方法（Magic Methods）是以双下划线 `__` 开头和结尾的特殊方法。Python 在特定操作时会**自动调用**它们，让你自定义对象行为。类似于 Java 的**方法覆写**（如 `toString()`、`equals()`），但 Python 更系统化。
+
+##### 7.9.1 一览表
+
+| 方法 | 何时调用 | 常见用途 |
+|------|----------|----------|
+| `__init__` | `obj = Class()` 创建实例 | 初始化属性 |
+| `__new__` | `obj = Class()` 创建实例（先于 init） | 控制实例创建 |
+| `__repr__` | `repr(obj)` / 直接显示 | 调试用，精确表示 |
+| `__str__` | `str(obj)` / `print(obj)` | 人类可读表示 |
+| `__len__` | `len(obj)` | 返回长度/数量 |
+| `__bool__` | `bool(obj)` / `if obj:` | 真假判断 |
+| `__getitem__` | `obj[key]` | 索引/键访问 |
+| `__setitem__` | `obj[key] = val` | 索引/键赋值 |
+| `__delitem__` | `del obj[key]` | 删除元素 |
+| `__iter__` | `for x in obj:` | 返回迭代器 |
+| `__next__` | `next(obj)` | 获取下一元素 |
+| `__call__` | `obj()` 像函数一样调用 | 函数化对象 |
+| `__eq__` | `obj1 == obj2` | 相等比较 |
+| `__lt__` | `obj1 < obj2` | 小于比较 |
+| `__add__` | `obj1 + obj2` | 加法运算 |
+| `__enter__` | `with obj:` 开始 | 上下文进入 |
+| `__exit__` | `with obj:` 结束 | 上下文退出 |
+| `__contains__` | `x in obj` | 成员判断 |
+
+##### 7.9.2 创建与初始化（`__new__` vs `__init__`）
+
+```python
+class Person:
+    def __new__(cls, name, age):
+        """创建实例（较少重写）"""
+        instance = super().__new__(cls)
+        return instance
+    
+    def __init__(self, name, age):
+        """初始化实例（最常用）"""
+        self.name = name
+        self.age = age
+
+p = Person("Alice", 30)  # __new__ 先调用，然后 __init__
+```
+
+> [!WARNING] 何时重写 `__new__`？
+> - 单例模式（控制实例数量）
+> - 不可变对象（创建时固定值）
+> - 子类化内置类型（str, int 等）
+>
+> 大多数情况只需重写 `__init__`
+
+**Java 对比**：
+```java
+// Java 只有构造方法，没有 __new__
+public class Person {
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+}
+```
+
+##### 7.9.3 字符串表示（`__repr__` vs `__str__`）
+
+```python
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    
+    def __repr__(self):
+        """调试用：精确、可用于重建对象"""
+        return f"Point(x={self.x}, y={self.y})"
+    
+    def __str__(self):
+        """人类可读：简洁展示"""
+        return f"({self.x}, {self.y})"
+
+p = Point(3, 4)
+
+print(p)          # (3, 4)      __str__（print 默认调用）
+repr(p)           # Point(x=3, y=4)  __repr__（调试用）
+print(repr(p))    # Point(x=3, y=4)
+```
+
+> [!TIP] 选择规则
+> - `__repr__`：返回能**重建对象**的字符串（如果可行）
+> - `__str__`：返回**人类可读**的字符串
+> - 如果只实现一个，优先 `__repr__`
+
+**Java 对比**：
+```java
+// Java 需要实现 toString()
+public class Point {
+    public String toString() {
+        return "(" + x + ", " + y + ")";
+    }
+}
+```
+
+##### 7.9.4 布尔判断（`__bool__`）
+
+```python
+class EmptyList:
+    def __init__(self, items=None):
+        self.items = items or []
+    
+    def __bool__(self):
+        """定义对象的布尔值"""
+        return len(self.items) > 0
+
+empty = EmptyList([])
+non_empty = EmptyList([1, 2, 3])
+
+bool(empty)     # False
+bool(non_empty) # True
+
+if non_empty:
+    print("非空")
+```
+
+> [!TIP] 如果没有 `__bool__`，Python 退化为 `__len__`
+> 如果没有 `__bool__`，会调用 `__len__`，非零长度返回 True
+
+##### 7.9.5 索引访问（`__getitem__`, `__setitem__`, `__delitem__`）
+
+```python
+class Sequence:
+    def __init__(self, data):
+        self.data = data
+    
+    def __getitem__(self, index):
+        """支持 obj[index]"""
+        return self.data[index]
+    
+    def __setitem__(self, index, value):
+        """支持 obj[index] = value"""
+        self.data[index] = value
+    
+    def __delitem__(self, index):
+        """支持 del obj[index]"""
+        del self.data[index]
+    
+    def __len__(self):
+        """支持 len(obj)"""
+        return len(self.data)
+
+seq = Sequence([1, 2, 3, 4, 5])
+seq[0]           # 1
+seq[1:3]         # [2, 3]（切片也支持）
+seq[0] = 100
+del seq[0]
+len(seq)         # 4
+```
+
+##### 7.9.6 迭代器协议（`__iter__`, `__next__`）
+
+```python
+class Counter:
+    def __init__(self, limit):
+        self.limit = limit
+        self.current = 0
+    
+    def __iter__(self):
+        """返回迭代器对象"""
+        return self
+    
+    def __next__(self):
+        """返回下一个元素"""
+        if self.current >= self.limit:
+            raise StopIteration
+        self.current += 1
+        return self.current - 1
+
+for i in Counter(3):
+    print(i)  # 0, 1, 2
+
+counter = Counter(3)
+next(counter)  # 0
+next(counter)  # 1
+```
+
+> [!WARNING] 迭代器 vs 可迭代对象
+> - **可迭代对象**：实现了 `__iter__`（如 list）
+> - **迭代器**：实现了 `__iter__` + `__next__`
+
+##### 7.9.7 函数化对象（`__call__`）
+
+```python
+class Adder:
+    def __init__(self, n):
+        self.n = n
+    
+    def __call__(self, x):
+        """使对象可以像函数一样调用"""
+        return self.n + x
+
+add_5 = Adder(5)
+add_5(10)  # 15（等价于 add_5.__call__(10)）
+```
+
+> [!TIP] `__call__` 的用途
+> - 创建带状态的"函数"
+> - 装饰器类
+> - 替代闭包（更 OOP 风格）
+
+##### 7.9.8 比较运算符（`__eq__`, `__lt__`, `__gt__` 等）
+
+```python
+class Version:
+    def __init__(self, major, minor, patch):
+        self.major = major
+        self.minor = minor
+        self.patch = patch
+    
+    def __eq__(self, other):
+        """== 比较"""
+        if not isinstance(other, Version):
+            return False
+        return (self.major, self.minor, self.patch) == \
+               (other.major, other.minor, other.patch)
+    
+    def __lt__(self, other):
+        """< 比较"""
+        return (self.major, self.minor, self.patch) < \
+               (other.major, other.minor, other.patch)
+
+v1 = Version(1, 2, 0)
+v2 = Version(1, 2, 0)
+v3 = Version(2, 0, 0)
+
+v1 == v2  # True
+v1 < v3   # True
+```
+
+> [!TIP] `functools.total_ordering` 简化
+> 只需实现 `__eq__` 和 `__lt__`，其他会自动生成
+
+```python
+from functools import total_ordering
+
+@total_ordering
+class Version:
+    def __init__(self, major, minor, patch):
+        self.major, self.minor, self.patch = major, minor, patch
+    
+    def __eq__(self, other):
+        if not isinstance(other, Version):
+            return NotImplemented
+        return (self.major, self.minor, self.patch) == \
+               (other.major, other.minor, other.patch)
+    
+    def __lt__(self, other):
+        if not isinstance(other, Version):
+            return NotImplemented
+        return (self.major, self.minor, self.patch) < \
+               (other.major, other.minor, other.patch)
+# __le__, __gt__, __ge__ 自动生成
+```
+
+##### 7.9.9 算术运算符（`__add__`, `__sub__`, `__mul__` 等）
+
+```python
+class Vector:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    
+    def __add__(self, other):
+        """+ 运算"""
+        return Vector(self.x + other.x, self.y + other.y)
+    
+    def __mul__(self, scalar):
+        """* 运算（标量乘法）"""
+        return Vector(self.x * scalar, self.y * scalar)
+    
+    def __rmul__(self, scalar):
+        """标量 * 向量（5 * v）"""
+        return Vector(self.x * scalar, self.y * scalar)
+    
+    def __neg__(self):
+        """一元负号 -v"""
+        return Vector(-self.x, -self.y)
+    
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
+
+v1 = Vector(1, 2)
+v2 = Vector(3, 4)
+
+v1 + v2    # Vector(4, 6)
+v1 * 3     # Vector(3, 6)
+3 * v1     # Vector(3, 6)（需要 __rmul__）
+-v1        # Vector(-1, -2)
+```
+
+**算术运算符速查**：
+
+| 运算符 | 正向方法 | 反向方法 | 原地方法 |
+|--------|----------|----------|----------|
+| `+` | `__add__` | `__radd__` | `__iadd__` |
+| `-` | `__sub__` | `__rsub__` | `__isub__` |
+| `*` | `__mul__` | `__rmul__` | `__imul__` |
+| `/` | `__truediv__` | `__rtruediv__` | `__itruediv__` |
+| `%` | `__mod__` | `__rmod__` | `__imod__` |
+| `**` | `__pow__` | `__rpow__` | `__ipow__` |
+
+##### 7.9.10 上下文管理器（`__enter__`, `__exit__`）
+
+```python
+class FileManager:
+    def __init__(self, filename, mode):
+        self.filename = filename
+        self.mode = mode
+        self.file = None
+    
+    def __enter__(self):
+        """进入 with 块时调用"""
+        self.file = open(self.filename, self.mode)
+        return self.file
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """退出 with 块时调用"""
+        self.file.close()
+        return False
+
+# 使用
+with FileManager("test.txt", "w") as f:
+    f.write("Hello!")
+```
+
+> [!TIP] `__exit__` 参数
+> - `exc_type/exc_val/exc_tb`：异常信息
+> - 返回 `True` 可以抑制异常（不推荐）
+
+##### 7.9.11 成员判断（`__contains__`）
+
+```python
+class Range:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+    
+    def __contains__(self, item):
+        """支持 `in` 操作符"""
+        return self.start <= item <= self.end
+
+r = Range(1, 10)
+5 in r     # True
+15 in r    # False
+```
+
+##### 7.9.12 完整示例：自定义分数类
+
+```python
+from functools import total_ordering
+
+@total_ordering
+class Fraction:
+    """分数类 - 展示多种魔术方法"""
+    
+    def __init__(self, numerator, denominator=1):
+        if denominator == 0:
+            raise ZeroDivisionError("分母不能为零")
+        g = self._gcd(numerator, denominator)
+        self.numerator = numerator // g
+        self.denominator = denominator // g
+    
+    def _gcd(self, a, b):
+        while b:
+            a, b = b, a % b
+        return abs(a)
+    
+    def __repr__(self):
+        return f"Fraction({self.numerator}, {self.denominator})"
+    
+    def __str__(self):
+        if self.denominator == 1:
+            return str(self.numerator)
+        return f"{self.numerator}/{self.denominator}"
+    
+    def __eq__(self, other):
+        if not isinstance(other, Fraction):
+            return NotImplemented
+        return self.numerator == other.numerator and \
+               self.denominator == other.denominator
+    
+    def __lt__(self, other):
+        if not isinstance(other, Fraction):
+            return NotImplemented
+        return self.numerator * other.denominator < \
+               other.numerator * self.denominator
+    
+    def __add__(self, other):
+        if isinstance(other, int):
+            other = Fraction(other, 1)
+        num = self.numerator * other.denominator + \
+              other.numerator * self.denominator
+        den = self.denominator * other.denominator
+        return Fraction(num, den)
+    
+    __radd__ = __add__
+    
+    def __mul__(self, other):
+        if isinstance(other, int):
+            other = Fraction(other, 1)
+        return Fraction(self.numerator * other.numerator,
+                       self.denominator * other.denominator)
+    
+    __rmul__ = __mul__
+    
+    def __neg__(self):
+        return Fraction(-self.numerator, self.denominator)
+    
+    def __bool__(self):
+        return self.numerator != 0
+    
+    def __hash__(self):
+        return hash((self.numerator, self.denominator))
+
+# 使用
+f1 = Fraction(1, 2)
+f2 = Fraction(1, 3)
+
+print(f1)            # 1/2
+print(f1 + f2)       # 5/6
+print(f1 * 3)        # 3/2
+print(f1 > f2)       # True
+print(bool(f1))      # True
+```
+
+---
+
+#### 📋 魔术方法速查
+
+| 类别 | 方法 | 说明 |
+|------|------|------|
+| **创建/初始化** | `__new__`, `__init__` | 对象创建 |
+| **字符串** | `__repr__`, `__str__` | 对象表示 |
+| **布尔** | `__bool__`, `__len__` | 真假判断 |
+| **比较** | `__eq__`, `__lt__`, `__le__`... | 运算符比较 |
+| **算术** | `__add__`, `__sub__`, `__mul__`... | 算术运算 |
+| **索引** | `__getitem__`, `__setitem__`, `__delitem__` | 索引操作 |
+| **迭代** | `__iter__`, `__next__` | 迭代器协议 |
+| **调用** | `__call__` | 函数化对象 |
+| **上下文** | `__enter__`, `__exit__` | with 语句 |
+| **成员** | `__contains__` | in 操作符 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **`__new__` 和 `__init__` 的区别？**
+   - `__new__` 创建实例，`__init__` 初始化实例
+   - `__new__` 先于 `__init__` 调用
+
+2. **`__repr__` 和 `__str__` 的区别？**
+   - `__repr__` 用于调试（精确），`__str__` 用于显示（可读）
+   - 如果只实现一个，优先 `__repr__`
+
+3. **什么是迭代器协议？**
+   - 实现 `__iter__` 和 `__next__`，`StopIteration` 异常结束
+
+4. **何时需要实现 `__call__`？**
+   - 需要对象可以像函数一样调用时（装饰器、带状态函数）
+
+5. **比较运算符需要实现几个？**
+   - 用 `@total_ordering` 装饰器，只需实现 `__eq__` 和 `__lt__`
+
+---
+
 ### 8. 输入输出
 
 ### 8. 输入输出
@@ -2671,15 +3143,74 @@ print(isinstance(Dog, type))  # True
 - 鸭子类型
 - 接口与协议
 
-#### 1.5 特殊方法（魔术方法）
-- __str__, __repr__
-- __len__, __bool__
-- __getitem__, __setitem__, __delitem__
-- __iter__, __next__
-- __enter__, __exit__
-- __call__
-- __eq__, __lt__, __gt__ 等比较运算符
-- __add__, __sub__, __mul__ 等算术运算符
+#### 1.5 特殊方法（魔术方法/Dunder Methods）
+
+> [!TIP] 详细内容请参见 7.9 节
+> 特殊方法的详细内容已在 **7.9 节**（基础语法）中完整讲解，包括：
+> - `__init__`, `__new__` - 创建与初始化
+> - `__repr__`, `__str__` - 字符串表示
+> - `__bool__`, `__len__` - 布尔判断
+> - `__getitem__`, `__setitem__` - 索引访问
+> - `__iter__`, `__next__` - 迭代器协议
+> - `__call__` - 函数化对象
+> - `__eq__`, `__lt__` 等 - 比较运算符
+> - `__add__`, `__mul__` 等 - 算术运算符
+> - `__enter__`, `__exit__` - 上下文管理器
+> - 完整示例：自定义分数类
+
+本节作为**进阶补充**，讲解高级应用：
+
+##### 1.5.1 属性描述符（`__get__`, `__set__`, `__delete__`）
+
+```python
+class Positive:
+    """属性描述符：确保值始终为正数"""
+    def __set_name__(self, owner, name):
+        self.name = name
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return instance.__dict__.get(self.name, 0)
+    
+    def __set__(self, instance, value):
+        if value < 0:
+            raise ValueError(f"{self.name} must be positive")
+        instance.__dict__[self.name] = value
+
+class Person:
+    age = Positive()
+    score = Positive()
+
+p = Person()
+p.age = 30    # OK
+p.age = -5    # ValueError: age must be positive
+```
+
+> [!TIP] 描述符 vs `__getattr__`
+> - **描述符**：对**每个**属性访问生效
+> - **`__getattr__`**：对**不存在**的属性访问生效
+
+##### 1.5.2 元类（Metaclass）
+
+```python
+# type 本身就是元类
+print(type(type))  # <class 'type'>
+
+# 自定义元类
+class Meta(type):
+    def __new__(mcs, name, bases, namespace):
+        # 可以修改类的创建过程
+        namespace['created_by'] = 'Meta'
+        return super().__new__(mcs, name, bases, namespace)
+
+class MyClass(metaclass=Meta):
+    pass
+
+print(MyClass.created_by)  # Meta
+```
+
+---
 
 ### 2. 迭代器与生成器
 #### 2.1 迭代器
