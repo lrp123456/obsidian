@@ -3089,30 +3089,991 @@ print(bool(f1))      # True
 
 ---
 ### 8. 输入输出
-- input() 函数
-- print() 函数
-- 文件读写
-  - open() 函数
-  - 文件模式（r, w, a, b, +）
-  - with 语句（上下文管理器）
-  - 文件对象方法（read, readline, readlines, write, writelines）
+
+> [!TIP] Java 开发者视角
+> Python 的输入输出与 Java 有显著差异：
+> - Python 的 `print()` 类似 Java 的 `System.out.println()`
+> - Python 的 `input()` 类似 Java 的 `Scanner.nextLine()`
+> - Python 文件操作语法更简洁，但概念相似
+
+---
+
+#### 8.1 input() 函数
+
+##### 8.1.1 基本用法
+
+```python
+# 基础输入
+name = input("请输入你的名字：")
+print(f"你好, {name}!")
+
+# input() 总是返回字符串
+age = input("请输入你的年龄：")
+print(f"类型: {type(age)}, 值: {age}")  # str
+```
+
+**Java 对比**：
+```java
+// Java 使用 Scanner
+Scanner scanner = new Scanner(System.in);
+String name = scanner.nextLine();
+```
+
+##### 8.1.2 类型转换
+
+```python
+# 字符串转整数
+age = int(input("请输入年龄："))
+
+# 字符串转浮点数
+price = float(input("请输入价格："))
+
+# 字符串转布尔值
+is_active = input("是否激活？(y/n)：").lower() == 'y'
+```
+
+##### 8.1.3 常见陷阱
+
+```python
+# 陷阱1：空输入返回空字符串
+name = input("名字: ")
+if name == "":
+    print("你没有输入任何内容")
+
+# 陷阱2：input() 阻塞等待用户输入
+# 在 CLI 工具中需要考虑超时或取消机制
+```
+
+---
+
+#### 8.2 print() 函数
+
+##### 8.2.1 基本用法
+
+```python
+# 基本打印
+print("Hello, World!")
+
+# 多个参数（自动空格分隔）
+print("Hello", "World", "!")
+# 输出：Hello World !
+
+# 指定分隔符
+print("2024", "01", "01", sep="-")
+# 输出：2024-01-01
+
+# 结束符（默认换行）
+print("第一行", end=" ")
+print("第二行")
+# 输出：第一行 第二行
+```
+
+##### 8.2.2 格式化输出
+
+```python
+# f-string（推荐）
+name = "Alice"
+age = 30
+print(f"{name} is {age} years old")
+
+# format() 方法
+print("{} is {} years old".format(name, age))
+print("{1} is {0} years old".format(age, name))  # 索引
+
+# % 格式化（旧式）
+print("%s is %d years old" % (name, age))
+```
+
+##### 8.2.3 输出到文件
+
+```python
+# 重定向到文件
+with open("output.txt", "w", encoding="utf-8") as f:
+    print("Hello", file=f)
+```
+
+---
+
+#### 8.3 文件读写
+
+##### 8.3.1 open() 函数与文件模式
+
+```python
+# 模式详解
+# r - 读取（默认），指针在开头，文件不存在报错
+# w - 写入，指针在开头，文件存在则覆盖
+# a - 追加，指针在末尾，文件不存在则创建
+# b - 二进制模式
+# + - 读写模式
+
+# 文本读取
+f = open("file.txt", "r", encoding="utf-8")
+
+# 文本写入
+f = open("file.txt", "w", encoding="utf-8")
+
+# 二进制模式（用于图片、音频等）
+f = open("image.png", "rb")
+
+# 追加模式
+f = open("log.txt", "a", encoding="utf-8")
+
+# 读写模式
+f = open("file.txt", "r+", encoding="utf-8")
+```
+
+> [!WARNING] 编码问题
+> 中文 Windows 默认编码可能是 gbk，跨平台操作应显式指定 `encoding="utf-8"`。
+
+##### 8.3.2 文件对象方法
+
+```python
+# 读取
+content = f.read()           # 读取全部内容
+content = f.read(100)        # 读取 100 字符/字节
+line = f.readline()          # 读取一行
+lines = f.readlines()        # 读取所有行到列表
+
+# 写入
+f.write("Hello\n")           # 写入字符串
+f.writelines(["Line1\n", "Line2\n"])  # 写入多行
+
+# 指针操作
+position = f.tell()          # 获取当前指针位置
+f.seek(0)                   # 移动到开头（相对于开头）
+f.seek(0, 2)                 # 移动到末尾（0=开头，2=SEEK_END）
+```
+
+**Java 对比**：
+```java
+// Java 使用 BufferedReader/BufferedWriter
+BufferedReader reader = new BufferedReader(new FileReader("file.txt"));
+String line = reader.readLine();
+reader.close();
+```
+
+##### 8.3.3 with 语句（上下文管理器）
+
+```python
+# 推荐写法：自动关闭文件
+with open("file.txt", "r", encoding="utf-8") as f:
+    content = f.read()
+# 文件自动关闭，无需 f.close()
+
+# 写入
+with open("output.txt", "w", encoding="utf-8") as f:
+    f.write("Hello, World!")
+
+# 逐行读取（最常见用法）
+with open("file.txt", "r", encoding="utf-8") as f:
+    for line in f:
+        print(line.strip())
+```
+
+> [!TIP] 为什么用 with？
+> - 自动释放资源（调用 `f.close()`）
+> - 即使发生异常也能正确关闭文件
+> - 代码更简洁，避免资源泄漏
+
+##### 8.3.4 实战：文件操作封装
+
+```python
+# 读取整个文件
+def read_file(path: str) -> str:
+    """读取文件全部内容"""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+# 逐行读取
+def read_lines(path: str) -> list[str]:
+    """读取文件所有行"""
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f]
+
+# 安全写入（原子操作）
+def write_file(path: str, content: str) -> None:
+    """写入文件（先写临时文件再重命名，更安全）"""
+    import tempfile
+    import os
+    dir_path = os.path.dirname(path) or "."
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                    dir=dir_path, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    os.replace(tmp_path, path)
+
+# 追加内容
+def append_file(path: str, content: str) -> None:
+    """追加内容到文件末尾"""
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(content + "\n")
+```
+
+##### 8.3.5 JSON 文件处理（Agent 开发核心）
+
+```python
+import json
+
+# 读取 JSON
+with open("config.json", "r", encoding="utf-8") as f:
+    config = json.load(f)  # 反序列化为 dict
+
+# 写入 JSON
+config = {"name": "Alice", "age": 30}
+with open("config.json", "w", encoding="utf-8") as f:
+    json.dump(config, f, ensure_ascii=False, indent=2)
+
+# 字符串与 JSON 互转
+json_str = json.dumps(config, ensure_ascii=False)
+config = json.loads(json_str)
+```
+
+> [!TIP] Agent 开发场景
+> LLM 的输入输出常需序列化为 JSON：
+> ```python
+> # 读取 Agent 上下文
+> with open("context.json", "r", encoding="utf-8") as f:
+>     messages = json.load(f)
+> ```
+
+---
+
+#### 📋 输入输出速查表
+
+| 操作 | 函数/方法 | 说明 |
+|------|----------|------|
+| 输入 | `input(prompt)` | 读取用户输入，返回 str |
+| 输出 | `print(*args)` | 打印到标准输出 |
+| 打开 | `open(file, mode)` | 打开文件 |
+| 读取 | `f.read()` / `f.readline()` / `f.readlines()` | 读取文件内容 |
+| 写入 | `f.write()` / `f.writelines()` | 写入文件 |
+| 指针 | `f.tell()` / `f.seek()` | 获取/移动位置 |
+| 关闭 | `f.close()` | 关闭文件（用 with 更安全） |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 文件操作中 `r`, `w`, `a` 的区别？**
+   - `r`：只读，指针在开头，文件不存在报错
+   - `w`：写入，指针在开头，文件存在则覆盖
+   - `a`：追加，指针在末尾，文件不存在则创建
+
+2. **为什么要用 `with` 语句操作文件？**
+   - 自动调用 `f.close()` 释放资源
+   - 即使发生异常也能正确关闭文件
+   - 避免资源泄漏
+
+3. **文本模式和二进制模式的区别？**
+   - 文本模式：按字符解析，处理文本（需要指定 encoding）
+   - 二进制模式：按字节处理，用于图片、音频等非文本数据
+
+4. **`read()`, `readline()`, `readlines()` 的区别？**
+   - `read()`：返回全部内容（字符串或字节）
+   - `readline()`：返回一行（字符串或字节）
+   - `readlines()`：返回所有行（列表）
+
+5. **如何处理文件指针？**
+   - `tell()` 获取当前位置
+   - `seek(offset, whence)` 移动指针位置
+     - `whence=0`（默认）：相对于开头
+     - `whence=1`：相对于当前位置
+     - `whence=2`：相对于末尾
 
 ### 9. 异常处理
-- try-except 语句
-- 异常类型（Exception, ValueError, TypeError 等）
-- 多异常捕获
-- else 和 finally 子句
-- raise 语句
-- 自定义异常类
-- assert 断言
+
+> [!TIP] Java 开发者视角
+> Python 异常处理与 Java 类似，但语法更简洁：
+> - `try-except` 替代 `try-catch`
+> - Python 没有 `throws` 声明（不需要）
+> - Python 异常是类，不是枚举值
+
+---
+
+#### 9.1 try-except 语句
+
+##### 9.1.1 基本语法
+
+```python
+try:
+    result = 10 / 0
+except ZeroDivisionError:
+    print("不能除以零")
+```
+
+**Java 对比**：
+```java
+// Java
+try {
+    int result = 10 / 0;
+} catch (ArithmeticException e) {
+    System.out.println("不能除以零");
+}
+```
+
+##### 9.1.2 捕获异常并获取信息
+
+```python
+try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print(f"错误类型: {type(e).__name__}")
+    print(f"错误信息: {e}")
+# 错误类型: ZeroDivisionError
+# 错误信息: division by zero
+```
+
+##### 9.1.3 多个 except 子句
+
+```python
+try:
+    value = int(input("输入数字："))
+    result = 10 / value
+except ValueError:
+    print("请输入有效的数字")
+except ZeroDivisionError:
+    print("不能除以零")
+```
+
+##### 9.1.4 一个 except 捕获多种异常
+
+```python
+try:
+    # 可能发生多种异常
+    value = int(input("输入数字："))
+    result = 10 / value
+except (ValueError, ZeroDivisionError) as e:
+    print(f"错误: {e}")
+```
+
+---
+
+#### 9.2 异常类型层次
+
+```python
+# Python 内置异常层次（简化）
+BaseException
+├── SystemExit
+├── KeyboardInterrupt
+└── Exception
+    ├── ValueError
+    ├── TypeError
+    ├── KeyError
+    ├── IndexError
+    ├── ZeroDivisionError
+    ├── FileNotFoundError
+    ├── ImportError
+    └── ...（更多）
+
+# 常见异常速查
+ValueError        # 值不合法（传入无效参数）
+TypeError        # 类型错误（操作类型不匹配）
+KeyError        # 字典键不存在
+IndexError      # 序列索引越界
+FileNotFoundError  # 文件不存在
+PermissionError   # 无权限
+```
+
+---
+
+#### 9.3 else 和 finally 子句
+
+##### 9.3.1 else 子句
+
+```python
+# else：仅在 try 块未发生异常时执行
+try:
+    value = int(input("输入正数："))
+    if value <= 0:
+        raise ValueError("必须是正数")
+except ValueError as e:
+    print(f"错误: {e}")
+else:
+    print(f"你输入了: {value}")  # 仅在成功时执行
+```
+
+##### 9.3.2 finally 子句
+
+```python
+# finally：无论是否发生异常都执行（用于清理）
+try:
+    f = open("file.txt", "r")
+    content = f.read()
+except FileNotFoundError:
+    print("文件不存在")
+finally:
+    # 确保文件被关闭
+    if 'f' in locals() and not f.closed:
+        f.close()
+    print("清理完成")
+```
+
+> [!TIP] else vs finally
+> - `else`：仅在 try 成功完成时执行
+> - `finally`：无论成功还是失败都执行（常用于资源清理）
+
+---
+
+#### 9.4 raise 语句
+
+##### 9.4.1 抛出异常
+
+```python
+# 基本抛出
+def divide(a, b):
+    if b == 0:
+        raise ZeroDivisionError("除数不能为零")
+    return a / b
+
+# 重新抛出（保留原始异常）
+try:
+    # 一些操作
+except SomeError as e:
+    raise  # 等同于 raise e，重新抛出当前异常
+```
+
+##### 9.4.2 异常链
+
+```python
+# Python 3+ 支持异常链
+try:
+    # 原始操作
+    raise ValueError("原始错误")
+except ValueError as e:
+    # 引发新异常时保留原因
+    raise RuntimeError("新错误") from e
+
+# 抑制异常链（不保留原因）
+raise RuntimeError("新错误") from None
+```
+
+---
+
+#### 9.5 自定义异常类
+
+##### 9.5.1 基本自定义异常
+
+```python
+# 继承自 Exception 或其子类
+class ValidationError(Exception):
+    """验证错误"""
+    pass
+
+class PositiveNumberError(ValidationError):
+    """必须是正数"""
+    def __init__(self, value, field_name=None):
+        self.value = value
+        self.field_name = field_name
+        super().__init__(f"{field_name} 必须是正数，当前值: {value}")
+
+# 使用
+def process(value):
+    if value < 0:
+        raise PositiveNumberError(value, "amount")
+    return value
+
+try:
+    process(-5)
+except PositiveNumberError as e:
+    print(e)  # amount 必须是正数，当前值: -5
+```
+
+##### 9.5.2 异常设计模式
+
+```python
+# 模式1：业务异常类
+class AgentError(Exception):
+    """Agent 相关错误基类"""
+    def __init__(self, message, code=None):
+        self.message = message
+        self.code = code
+        super().__init__(f"[{code}] {message}" if code else message)
+
+class ToolNotFoundError(AgentError):
+    """工具不存在"""
+    def __init__(self, tool_name):
+        super().__init__(f"工具不存在: {tool_name}", code="TOOL_NOT_FOUND")
+
+class InvalidInputError(AgentError):
+    """输入无效"""
+    def __init__(self, field, reason):
+        super().__init__(f"无效输入 - {field}: {reason}", code="INVALID_INPUT")
+
+# 使用
+raise ToolNotFoundError("unknown_tool")
+```
+
+---
+
+#### 9.6 assert 断言
+
+##### 9.6.1 基本用法
+
+```python
+# assert 条件，条件为 False 时抛出 AssertionError
+def calculate_area(width, height):
+    assert width > 0, "宽度必须为正数"
+    assert height > 0, "高度必须为正数"
+    return width * height
+
+calculate_area(-5, 10)  # AssertionError: 宽度必须为正数
+```
+
+##### 9.6.2 调试 vs 生产环境
+
+```python
+# 断言可以禁用（Python -O 或 -OO 标志）
+# 生产环境通常禁用断言
+
+# 防御式编程：对于真正需要检查的，用 if 替代
+def divide(a, b):
+    if b == 0:
+        raise ValueError("除数不能为零")  # 不要用 assert
+    return a / b
+```
+
+> [!WARNING] 断言的坑
+> - 断言在 `python -O`（优化）模式下会被忽略
+> - 不要用断言检查可能导致代码崩溃的条件
+> - 用于调试和开发期间的内部检查
+
+---
+
+#### 9.7 异常处理最佳实践
+
+##### 9.7.1 常见模式
+
+```python
+# 模式1：尽早捕获，早期返回
+def process(user):
+    if user is None:
+        return None  # 提前返回，减少嵌套
+    # 继续处理...
+
+# 模式2：清理资源（使用 with 或 finally）
+resource = acquire_resource()
+try:
+    use(resource)
+finally:
+    release_resource(resource)
+
+# 模式3：异常日志记录
+import logging
+try:
+    risky_operation()
+except Exception as e:
+    logging.error(f"操作失败: {e}", exc_info=True)
+    raise
+```
+
+##### 9.7.2 反模式
+
+```python
+# ❌ 反模式1：捕获所有异常
+try:
+    something()
+except:  # 太宽泛，不知道什么错误
+    pass
+
+# ✅ 正确做法：捕获特定异常
+try:
+    something()
+except ValueError as e:
+    print(f"值错误: {e}")
+
+# ❌ 反模式2：吞掉异常
+try:
+    something()
+except Exception:
+    pass  # 错误被忽略，不知道发生了什么
+
+# ✅ 正确做法：记录并重新抛出
+try:
+    something()
+except Exception as e:
+    logging.error(f"操作失败: {e}")
+    raise  # 或 raise YourCustomException() from e
+```
+
+---
+
+#### 📋 异常处理速查表
+
+| 语句 | 说明 |
+|------|------|
+| `try-except` | 捕获异常 |
+| `try-except-else` | else 在无异常时执行 |
+| `try-except-finally` | finally 始终执行 |
+| `raise` | 抛出异常 |
+| `raise from` | 异常链 |
+| `assert` | 调试断言 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 异常处理的关键字？**
+   - `try`, `except`, `else`, `finally`, `raise`
+
+2. **`try-except-else-finally` 的执行顺序？**
+   - try → 正常则 else → finally
+   - try → 异常则 except → finally
+
+3. **如何创建自定义异常？**
+   - 继承 `Exception` 或其子类
+   - 添加自定义属性和方法
+
+4. **`raise` 和 `raise from` 的区别？**
+   - `raise` 单独使用：重新抛出当前捕获的异常
+   - `raise NewException() from e`：抛出新异常并保留原异常作为原因
+
+5. **断言什么时候会被忽略？**
+   - Python 使用 `-O`（优化）或 `-OO` 标志运行时
+
+6. **为什么不要用 `except:` 捕获所有异常？**
+   - 捕获所有异常会隐藏真正的错误
+   - 无法针对性处理不同类型的异常
+   - 最佳实践是捕获特定异常类型
 
 ### 10. 模块与包
-- import 语句
-- from...import 语句
-- 模块搜索路径
-- __name__ 与 __main__
-- 包的结构与 __init__.py
-- 第三方库安装（pip）
+
+> [!TIP] Java 开发者视角
+> Python 的模块与 Java 的 package 类似，但概念不同：
+> - Python 的 `.py` 文件就是一个模块
+> - Python 的文件夹（含 `__init__.py`）就是一个包
+> - `import` 类似于 Java 的 `import` 但更灵活
+
+---
+
+#### 10.1 import 语句
+
+##### 10.1.1 基本导入
+
+```python
+# 导入整个模块
+import math
+print(math.pi)          # 3.141592653589793
+print(math.sqrt(16))    # 4.0
+
+# 导入并起别名
+import math as m
+print(m.pi)
+
+# 导入特定内容（推荐）
+from math import pi, sqrt
+print(pi)               # 直接使用
+print(sqrt(16))
+```
+
+**Java 对比**：
+```java
+// Java
+import java.util.List;
+import java.util.ArrayList;
+```
+
+##### 10.1.2 from...import 语句
+
+```python
+# 导入特定函数/类/变量
+from random import randint, choice
+
+# 导入全部（不推荐，容易命名冲突）
+from math import *  # 不推荐
+
+# 导入并起别名
+from collections import OrderedDict as OD
+```
+
+##### 10.1.3 导入顺序
+
+```python
+# 标准库 → 第三方库 → 本地应用
+import os
+import sys
+
+import requests          # 第三方库
+from myapp import utils  # 本地模块
+
+# 使用绝对导入（推荐）
+from myapp.utils import helper
+```
+
+---
+
+#### 10.2 模块搜索路径
+
+```python
+import sys
+
+# 查看搜索路径
+print(sys.path)
+# [
+#   '/path/to/current/script',
+#   '/usr/lib/python3.11',
+#   '/usr/lib/python3.11/lib-dynload',
+#   '/usr/local/lib/python3.11/site-packages',
+#   ...
+# ]
+
+# 添加搜索路径
+sys.path.insert(0, "/path/to/your/module")
+```
+
+> [!TIP] 模块搜索顺序
+> 1. 内置模块
+> 2. `sys.path` 中的目录（第一个通常是脚本所在目录）
+> 3. 环境变量 `PYTHONPATH`
+> 4. 标准库
+
+---
+
+#### 10.3 __name__ 与 __main__
+
+##### 10.3.1 模块执行入口
+
+```python
+# 当直接运行脚本时，__name__ == "__main__"
+# 当被导入时，__name__ == "模块名"
+
+# mymodule.py
+def main():
+    print("这是主函数")
+
+if __name__ == "__main__":
+    # 只有直接运行此文件时才执行
+    main()
+    print("脚本直接运行")
+else:
+    # 被导入时执行
+    print("模块被导入")
+```
+
+**Java 对比**：
+```java
+// Java 没有等价语法
+// Java 需要 main(String[] args) 方法
+// 只能通过命令行运行或 IDE 执行
+```
+
+##### 10.3.2 常用模式
+
+```python
+# 模式：模块兼作脚本
+# utils.py
+def process_data(data):
+    """数据处理函数"""
+    return [item.upper() for item in data]
+
+if __name__ == "__main__":
+    # 作为脚本运行时执行
+    sample = ["hello", "world"]
+    result = process_data(sample)
+    print(result)
+```
+
+---
+
+#### 10.4 包的结构
+
+##### 10.4.1 目录结构
+
+```
+myproject/
+├── __init__.py       # 包初始化，可选（Python 3.3+ 可不写）
+├── module1.py        # 模块文件
+├── module2.py
+└── subpackage/
+    ├── __init__.py   # 子包初始化
+    ├── module3.py
+    └── module4.py
+```
+
+##### 10.4.2 __init__.py 的作用
+
+```python
+# __init__.py - 在第一次导入包时执行
+
+# 1. 设置包级别的导入
+from . import module1
+from .module2 import some_function
+
+# 2. 定义 __all__ 控制 "from package import *"
+__all__ = ["module1", "module2"]
+
+# 3. 初始化配置
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+##### 10.4.3 相对导入与绝对导入
+
+```python
+# 假设结构：
+# mypackage/
+#   ├── __init__.py
+#   ├── main.py
+#   └── utils/
+#       ├── __init__.py
+#       └── helpers.py
+
+# 绝对导入（推荐）
+from mypackage.utils.helpers import func
+
+# 相对导入（仅在包内使用）
+# 在 mypackage/main.py 中：
+from .utils.helpers import func  # 相对导入
+from .. import moduleX          # 上一级
+```
+
+---
+
+#### 10.5 第三方库安装（pip）
+
+##### 10.5.1 基本命令
+
+```bash
+# 安装包
+pip install requests
+
+# 指定版本
+pip install requests==2.28.0
+pip install "requests>=2.0"
+
+# 从 requirements.txt 安装
+pip install -r requirements.txt
+
+# 升级包
+pip install --upgrade requests
+
+# 卸载
+pip uninstall requests
+
+# 查看已安装
+pip list
+pip freeze  # 导出为 requirements 格式
+```
+
+##### 10.5.2 虚拟环境
+
+```bash
+# 创建虚拟环境（推荐）
+python -m venv myenv
+
+# 激活
+# Linux/Mac:
+source myenv/bin/activate
+# Windows:
+myenv\Scripts\activate
+
+# 退出
+deactivate
+```
+
+> [!TIP] 为什么要用虚拟环境？
+> - 隔离项目依赖，避免版本冲突
+> - 每个项目独立管理依赖
+> - 便于复现和部署
+
+##### 10.5.3 requirements.txt 格式
+
+```
+# requirements.txt 示例
+requests==2.28.0
+numpy>=1.21.0
+pandas
+openai>=1.0.0
+pydantic>=2.0.0
+```
+
+---
+
+#### 10.6 实战：模块设计
+
+##### 10.6.1 项目结构示例
+
+```
+agent_project/
+├── __init__.py           # 项目初始化
+├── main.py                # 入口文件
+├── config.py              # 配置
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py          # 日志工具
+│   ├── validator.py       # 验证工具
+│   └── file_ops.py        # 文件操作
+├── models/
+│   ├── __init__.py
+│   └── message.py         # 消息模型
+└── tools/
+    ├── __init__.py
+    └── search.py          # 搜索工具
+```
+
+##### 10.6.2 __init__.py 最佳实践
+
+```python
+# __init__.py - 统一导出接口
+
+from .logger import setup_logger, get_logger
+from .validator import validate_input, ValidationSchema
+from .file_ops import read_file, write_file
+
+# 定义公开接口
+__all__ = [
+    "setup_logger",
+    "get_logger", 
+    "validate_input",
+    "ValidationSchema",
+    "read_file",
+    "write_file",
+]
+```
+
+---
+
+#### 📋 模块与包速查表
+
+| 语句 | 说明 |
+|------|------|
+| `import module` | 导入整个模块 |
+| `import module as alias` | 导入并起别名 |
+| `from module import name` | 导入特定内容 |
+| `from module import *` | 导入全部（不推荐） |
+| `__name__` | 模块名称，`__main__` 表示直接运行 |
+| `__init__.py` | 包初始化文件 |
+| `__all__` | 控制 `from package import *` 的导出 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 模块搜索路径的顺序？**
+   - 内置模块 → `sys.path` 目录（脚本目录优先）→ 环境变量 `PYTHONPATH` → 标准库
+
+2. **`__name__ == "__main__"` 的作用？**
+   - 判断模块是直接运行还是被导入
+   - 用于实现模块兼作脚本
+
+3. **`__init__.py` 的作用？**
+   - 标识目录为 Python 包
+   - 可用于包的初始化和导出配置
+   - Python 3.3+ 可不写（namespace package）
+
+4. **如何避免循环导入？**
+   - 将导入移到函数内部
+   - 重新组织模块结构
+   - 使用 `TYPE_CHECKING` 延迟类型注解导入
+
+5. **`from module import *` 为什么不推荐？**
+   - 可能导入同名变量，导致命名冲突
+   - 不明确导入了哪些内容
+   - 难以追踪问题
+
+6. **pip 和虚拟环境的最佳实践？**
+   - 每个项目创建独立虚拟环境
+   - 使用 `requirements.txt` 管理依赖
+   - 提交 `requirements.txt` 到版本控制
 
 ---
 
