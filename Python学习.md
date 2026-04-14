@@ -3088,9 +3088,6 @@ print(bool(f1))      # True
    - 用 `@total_ordering` 装饰器，只需实现 `__eq__` 和 `__lt__`
 
 ---
-
-### 8. 输入输出
-
 ### 8. 输入输出
 - input() 函数
 - print() 函数
