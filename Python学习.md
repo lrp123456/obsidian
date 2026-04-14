@@ -6063,77 +6063,1588 @@ with ThreadPoolExecutor(max_workers=2) as executor:
    - 通用 → `concurrent.futures`
 
 ### 9. 类型系统（Type Hints）
-- 基本类型注解
-- typing 模块
-  - List, Dict, Set, Tuple
-  - Optional, Union
-  - Callable, Any
-  - TypeVar, Generic
-  - Protocol
-- 类型别名
-- @overload 装饰器
-- 类型检查工具（mypy）
+
+> [!TIP] Java 开发者视角
+> Python 的类型提示类似 Java 的类型注解（JSR-380）：
+> - Python 用 `typing` 模块，Java 用 JSR-380（Bean Validation）
+> - Python 是**运行时不强制检查**的类型提示
+> - Java 是**编译时或运行时强制检查**的注解
+
+---
+
+#### 9.1 基本类型注解
+
+##### 9.1.1 变量注解
+
+```python
+# 变量类型注解
+name: str = "Alice"
+age: int = 30
+is_active: bool = True
+price: float = 19.99
+
+# 无初始值
+count: int
+```
+
+##### 9.1.2 函数注解
+
+```python
+def greet(name: str, age: int = 0) -> str:
+    return f"Hello, {name}"
+
+# 查看注解
+print(greet.__annotations__)
+# {'name': <class 'str'>, 'age': <class 'int'>, 'return': <class 'str'>}
+```
+
+##### 9.1.3 复杂类型注解
+
+```python
+from typing import List, Dict, Set, Tuple, Optional
+
+# 列表
+names: List[str] = ["Alice", "Bob"]
+
+# 字典
+config: Dict[str, int] = {"timeout": 30, "retries": 3}
+
+# 集合
+unique_ids: Set[int] = {1, 2, 3}
+
+# 元组（固定长度和类型）
+point: Tuple[int, int, int] = (1, 2, 3)
+
+# 可选值
+nickname: Optional[str] = None  # 等同于 Union[str, None]
+```
+
+---
+
+#### 9.2 typing 模块详解
+
+##### 9.2.1 Union 和 Optional
+
+```python
+from typing import Union, Optional
+
+# Union - 联合类型（多种类型之一）
+def process(value: Union[int, str]) -> str:
+    return str(value)
+
+# Optional - 可选类型（可以是 None）
+def greet(name: Optional[str]) -> str:
+    if name is None:
+        return "Hello, stranger"
+    return f"Hello, {name}"
+
+# Python 3.10+ 可以用 | 替代
+def process_v2(value: int | str) -> str:
+    return str(value)
+
+def greet_v2(name: str | None) -> str:
+    return f"Hello, {name}" if name else "Hello, stranger"
+```
+
+##### 9.2.2 Callable
+
+```python
+from typing import Callable
+
+# Callable[[参数类型], 返回类型]
+def apply(func: Callable[[int, int], int], a: int, b: int) -> int:
+    return func(a, b)
+
+def add(a, b):
+    return a + b
+
+print(apply(add, 1, 2))  # 3
+
+# 无参数的 Callable
+def callback() -> None:
+    pass
+
+def on_event(cb: Callable[[], None]) -> None:
+    cb()
+
+# Callable 捕获参数
+def create_logger(level: str) -> Callable[[str], None]:
+    def log(message: str) -> None:
+        print(f"[{level}] {message}")
+    return log
+```
+
+##### 9.2.3 TypeVar 和 Generic
+
+```python
+from typing import TypeVar, Generic, List
+
+# TypeVar - 类型变量
+T = TypeVar('T')
+U = TypeVar('U', bound=int)  # 有上界限制
+
+def first(lst: List[T]) -> T:
+    """返回列表第一个元素"""
+    return lst[0]
+
+print(first([1, 2, 3]))   # 1（推断为 int）
+print(first(["a", "b"]))   # a（推断为 str）
+
+# Generic - 泛型类
+class Stack(Generic[T]):
+    def __init__(self):
+        self._items: List[T] = []
+    
+    def push(self, item: T) -> None:
+        self._items.append(item)
+    
+    def pop(self) -> T:
+        return self._items.pop()
+
+stack_int: Stack[int] = Stack()
+stack_int.push(1)
+print(stack_int.pop())  # 1
+
+stack_str: Stack[str] = Stack()
+stack_str.push("hello")
+print(stack_str.pop())  # hello
+```
+
+##### 9.2.4 Protocol（结构子类型）
+
+```python
+from typing import Protocol, runtime_checkable
+
+# Protocol - 定义接口（类似 Go 的接口）
+@runtime_checkable
+class Drawable(Protocol):
+    def draw(self) -> None:
+        ...
+
+class Circle:
+    def draw(self) -> None:
+        print("绘制圆形")
+
+class Person:
+    pass  # 没有 draw 方法
+
+c = Circle()
+p = Person()
+
+# isinstance 检查（需要 @runtime_checkable）
+print(isinstance(c, Drawable))  # True
+print(isinstance(p, Drawable))  # False
+```
+
+##### 9.2.5 类型别名和 NewType
+
+```python
+from typing import NewType, TypedDict, NamedTuple
+
+# 类型别名
+Vector = List[float]
+Matrix = List[List[float]]
+
+def scale(vector: Vector, factor: float) -> Vector:
+    return [x * factor for x in vector]
+
+# NewType - 创建新类型（运行时有效）
+UserId = NewType('UserId', int)
+OrderId = NewType('OrderId', int)
+
+def get_user(user_id: UserId) -> str:
+    return f"User {user_id}"
+
+uid = UserId(123)
+print(get_user(uid))  # User 123
+
+# TypedDict - 类型化字典
+class User(TypedDict):
+    name: str
+    age: int
+    email: str
+
+user: User = {"name": "Alice", "age": 30, "email": "alice@example.com"}
+
+# NamedTuple - 命名元组
+class Point(NamedTuple):
+    x: float
+    y: float
+    z: float = 0.0  # 有默认值
+
+p = Point(1.0, 2.0)
+print(p.x, p.y, p.z)  # 1.0 2.0 0.0
+```
+
+---
+
+#### 9.3 @overload 装饰器
+
+```python
+from typing import overload
+
+# 重载函数（不同参数类型返回不同类型）
+@overload
+def process(value: int) -> int: ...
+@overload
+def process(value: str) -> str: ...
+@overload
+def process(value: list) -> int: ...
+
+def process(value):
+    """实际实现"""
+    return value if not isinstance(value, list) else len(value)
+
+print(process(5))        # 5
+print(process("hello"))  # hello
+print(process([1,2,3])) # 3
+```
+
+---
+
+#### 9.4 类型检查工具（mypy）
+
+```bash
+# 安装 mypy
+pip install mypy
+
+# 运行类型检查
+mypy my_module.py
+
+# 检查整个项目
+mypy src/
+
+# 配置忽略某些错误
+# mypy.ini 或 pyproject.toml
+```
+
+```ini
+[mypy]
+python_version = 3.11
+warn_return_any = True
+warn_unused_configs = True
+disallow_untyped_defs = True
+```
+
+> [!TIP] mypy 使用场景
+> - CI/CD 中集成类型检查
+> - 大型项目强制类型规范
+> - 与 IDE 配合提供更好的代码补全
+
+---
+
+#### 📋 类型系统速查表
+
+| 类型 | 说明 |
+|------|------|
+| `int`, `str`, `float`, `bool` | 基本类型 |
+| `List[T]`, `Dict[K, V]` | 泛型容器 |
+| `Union[A, B]` | 联合类型 |
+| `Optional[X]` | 可选类型（等于 Union[X, None]） |
+| `Callable[[args], ret]` | 可调用对象 |
+| `TypeVar` | 类型变量 |
+| `Protocol` | 结构化接口 |
+| `NewType` | 新类型 |
+| `TypedDict` | 类型化字典 |
+| `NamedTuple` | 命名元组 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 类型提示和 Java 类型的区别？**
+   - Python 是**可选的静态类型检查**（类型提示）
+   - Java 是**强制的静态/运行时类型检查**
+   - Python 类型提示不改变运行时行为
+
+2. **Optional 和 Union[str, None] 的区别？**
+   - 功能完全相同
+   - `Optional[X]` 是 `Union[X, None]` 的简写
+   - Python 3.10+ 推荐用 `X | None`
+
+3. **TypeVar 和 Generic 的区别？**
+   - `TypeVar` 定义类型变量
+   - `Generic` 用于创建泛型类/函数
+
+4. **Protocol 和 ABC 的区别？**
+   - Protocol：结构子类型（鸭子类型）
+   - ABC：名义子类型（需要显式继承）
+
+5. **mypy 的作用？**
+   - 静态类型检查
+   - 在编译时发现类型错误
+   - 不影响运行时性能
 
 ### 10. 内存管理与性能优化
+
+---
+
 #### 10.1 内存管理
-- 引用计数
-- 垃圾回收机制（GC）
-- gc 模块
-- 内存视图（memoryview）
-- 弱引用（weakref）
+
+##### 10.1.1 引用计数
+
+```python
+# Python 使用引用计数 + 垃圾回收
+import sys
+
+a = [1, 2, 3]  # 引用计数 +1
+print(sys.getrefcount(a))  # 2（创建时1，getrefcount临时+1）
+
+b = a          # 引用计数 +1
+print(sys.getrefcount(a))  # 3
+
+del b          # 引用计数 -1
+print(sys.getrefcount(a))  # 2
+
+# 循环引用问题
+a = []
+b = [a]
+a.append(b)  # 循环引用：a -> b -> a
+# 引用计数无法处理循环引用，需要 GC 回收
+```
+
+##### 10.1.2 垃圾回收（GC）
+
+```python
+import gc
+
+# 手动触发垃圾回收
+gc.collect()
+
+# 查看 GC 状态
+print(gc.get_stats())
+
+# 查看被管理对象
+print(gc.get_objects())
+
+# 禁用 GC
+gc.disable()
+gc.enable()
+
+# 调试循环引用
+gc.set_debug(gc.DEBUG_SAVEALL)
+```
+
+##### 10.1.3 内存视图（memoryview）
+
+```python
+# memoryview - 共享内存切片
+data = bytearray([1, 2, 3, 4, 5])
+
+# 创建视图（不复制数据）
+view = memoryview(data)
+print(view[0])       # 1
+print(view[1:3])     # <memory at 0x...>
+
+# 修改视图影响原数据
+view[0] = 100
+print(data)          # bytearray(b'd...')
+
+# 指定格式
+view_int = memoryview(data).cast('I')
+print(view_int[0])   # 以整数格式读取
+```
+
+##### 10.1.4 弱引用（weakref）
+
+```python
+import weakref
+
+# 弱引用不增加引用计数
+class MyClass:
+    pass
+
+obj = MyClass()
+weak = weakref.ref(obj)  # 创建弱引用
+
+print(weak())     # 获取对象（仍存在）
+print(weak() is obj)
+
+del obj           # 删除强引用
+print(weak())     # None（对象被回收）
+
+# 弱引用应用：缓存
+import weakref
+
+_cache = {}
+
+def get_object(key):
+    if key in _cache:
+        return _cache[key]
+    obj = create_object(key)
+    _cache[key] = weakref.ref(obj)  # 弱引用，不阻止回收
+    return obj
+```
+
+---
 
 #### 10.2 性能优化
-- 时间复杂度与空间复杂度
-- timeit 模块测量性能
-- cProfile 性能分析
-- 数据结构选择
-- 算法优化
+
+##### 10.2.1 时间复杂度与空间复杂度
+
+```python
+# Python 内置数据结构复杂度
+# List:
+#   索引访问: O(1)
+#   尾部追加: O(1)
+#   中间插入: O(n)
+#   查找: O(n)
+
+# Set/Dict:
+#   查找/插入/删除: O(1) 平均
+#   最坏 O(n)
+
+# 选择正确的数据结构
+def find_duplicates_slow(items):
+    """O(n²) - 列表遍历"""
+    duplicates = []
+    for i, item in enumerate(items):
+        if item in items[i+1:]:  # O(n) 查找
+            duplicates.append(item)
+    return duplicates
+
+def find_duplicates_fast(items):
+    """O(n) - 使用集合"""
+    seen = set()
+    duplicates = []
+    for item in items:
+        if item in seen:
+            duplicates.append(item)
+        seen.add(item)
+    return duplicates
+```
+
+##### 10.2.2 timeit 模块
+
+```python
+import timeit
+
+# 测量代码执行时间
+result = timeit.timeit(
+    '[i for i in range(1000)]',
+    number=10000
+)
+print(f"执行时间: {result:.4f}秒")
+
+# 测量函数时间
+def loop_sum():
+    return sum(range(1000))
+
+result = timeit.timeit(loop_sum, number=10000)
+print(f"loop_sum: {result:.4f}秒")
+
+# repeat - 多次测量
+result = timeit.repeat(
+    'sorted(data)',
+    setup='import random; data=[random.random() for _ in range(1000)]',
+    repeat=5,
+    number=1000
+)
+print(f"最快: {min(result):.4f}秒")
+```
+
+##### 10.2.3 cProfile 性能分析
+
+```python
+import cProfile
+import pstats
+from io import StringIO
+
+# 分析函数
+def slow_function():
+    total = 0
+    for i in range(10000):
+        total += i ** 2
+    return total
+
+profiler = cProfile.Profile()
+profiler.enable()
+
+result = slow_function()
+
+profiler.disable()
+
+# 输出统计
+stream = StringIO()
+stats = pstats.Stats(profiler, stream=stream)
+stats.sort_stats('cumulative')
+stats.print_stats(10)  # 前10行
+
+print(stream.getvalue())
+```
+
+##### 10.2.4 性能优化技巧
+
+```python
+# 技巧1：使用局部变量（快）
+def slow():
+    import math
+    results = []
+    for i in range(1000):
+        results.append(math.sin(i))
+    return results
+
+def fast():
+    import math
+    sin = math.sin  # 本地引用
+    results = []
+    for i in range(1000):
+        results.append(sin(i))
+    return results
+
+# 技巧2：列表推导式 > for 循环
+# 慢
+result = []
+for i in range(10000):
+    result.append(i ** 2)
+
+# 快
+result = [i ** 2 for i in range(10000)]
+
+# 技巧3：生成器替代列表（省内存）
+# 差
+total = sum([i ** 2 for i in range(1000000)])
+
+# 好
+total = sum(i ** 2 for i in range(1000000))
+
+# 技巧4：使用 __slots__
+class WithoutSlots:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class WithSlots:
+    __slots__ = ['x', 'y']
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+```
+
+---
+
+#### 📋 内存管理速查表
+
+| 操作 | 说明 |
+|------|------|
+| `sys.getrefcount()` | 获取引用计数 |
+| `gc.collect()` | 手动触发 GC |
+| `gc.disable/enable` | 禁用/启用 GC |
+| `weakref.ref` | 弱引用 |
+| `memoryview` | 内存视图 |
+| `timeit.timeit` | 性能测量 |
+| `cProfile` | 性能分析 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 内存管理机制？**
+   - 引用计数（主要）+ 垃圾回收（处理循环引用）
+   - 引用计数为0时立即释放
+
+2. **循环引用如何处理？**
+   - GC 模块标记清除循环引用对象
+   - 可以用 `gc.collect()` 手动触发
+
+3. **如何避免内存泄漏？**
+   - 及时释放资源（文件、数据库连接）
+   - 注意全局变量持有引用
+   - 使用弱引用缓存
+
+4. **`__slots__` 对性能的影响？**
+   - 减少内存占用
+   - 加快属性访问（无需 `__dict__` 查询）
 
 ### 11. 反射与内省
-- dir() 查看属性
-- hasattr(), getattr(), setattr(), delattr()
-- vars() 与 __dict__
-- inspect 模块
-- __doc__ 与 help()
+
+---
+
+#### 11.1 内省函数
+
+```python
+# dir() - 查看对象所有属性和方法
+class Person:
+    def __init__(self, name):
+        self.name = name
+    
+    def greet(self):
+        return f"Hello, {self.name}"
+
+p = Person("Alice")
+print(dir(p))
+# ['__class__', '__delattr__', ..., 'greet', 'name', ...]
+
+# vars() - 查看对象的 __dict__
+print(vars(p))  # {'name': 'Alice'}
+
+# type() - 查看对象类型
+print(type(p))  # <class '__main__.Person'>
+print(type(p).__name__)  # Person
+```
+
+##### 11.2 hasattr, getattr, setattr, delattr
+
+```python
+class Config:
+    def __init__(self):
+        self.host = "localhost"
+        self.port = 8080
+
+config = Config()
+
+# hasattr - 检查属性是否存在
+print(hasattr(config, "host"))     # True
+print(hasattr(config, "timeout"))  # False
+
+# getattr - 获取属性值
+host = getattr(config, "host")
+print(host)  # localhost
+
+# 获取不存在的属性，提供默认值
+timeout = getattr(config, "timeout", 30)
+print(timeout)  # 30
+
+# setattr - 设置属性值
+setattr(config, "timeout", 60)
+print(config.timeout)  # 60
+
+# delattr - 删除属性
+delattr(config, "timeout")
+print(hasattr(config, "timeout"))  # False
+```
+
+##### 11.3 inspect 模块
+
+```python
+import inspect
+
+class Agent:
+    """Agent 类"""
+    def __init__(self, name: str):
+        self.name = name
+    
+    def chat(self, message: str) -> str:
+        """处理消息"""
+        return f"Echo: {message}"
+
+# 获取类的所有方法
+print(inspect.getmembers(Agent, predicate=inspect.isfunction))
+# [('chat', <function>), ...]
+
+# 获取函数签名
+sig = inspect.signature(Agent.chat)
+print(sig)  # (self, message: str) -> str
+
+# 获取函数文档
+print(inspect.getdoc(Agent.chat))
+# 处理消息
+
+# 获取函数源代码
+print(inspect.getsource(Agent.chat))
+
+# 检查类型
+print(inspect.isclass(Agent))         # True
+print(inspect.ismethod(Agent.chat))    # False（未绑定）
+print(inspect.isfunction(Agent.chat))   # True
+```
+
+##### 11.4 类信息检查
+
+```python
+# 查看类继承层次
+class Base: pass
+class Derived(Base): pass
+
+print(Derived.__mro__)
+# (<class '__main__.Derived'>, <class '__main__.Base'>, <class 'object'>)
+
+# 查看类属性
+class MyClass:
+    class_attr = 100
+    
+    def __init__(self):
+        self.instance_attr = 200
+
+print(MyClass.__dict__.keys())    # dict_keys(['__module__', 'class_attr', ...])
+print(MyClass.class_attr)         # 100
+
+# 检查实例类型
+obj = MyClass()
+print(isinstance(obj, MyClass))    # True
+print(isinstance(obj, object))    # True
+```
+
+---
+
+#### 📋 反射与内省速查表
+
+| 函数 | 说明 |
+|------|------|
+| `dir(obj)` | 获取所有属性和方法 |
+| `vars(obj)` | 获取 `__dict__` |
+| `hasattr(obj, name)` | 检查属性存在 |
+| `getattr(obj, name, default)` | 获取属性值 |
+| `setattr(obj, name, value)` | 设置属性值 |
+| `delattr(obj, name)` | 删除属性 |
+| `inspect.getmembers()` | 获取类成员 |
+| `inspect.signature()` | 获取函数签名 |
+| `inspect.getsource()` | 获取源代码 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **`__dict__` 和 `dir()` 的区别？**
+   - `__dict__`：对象属性的原始字典
+   - `dir()`：包含继承属性和特殊方法
+
+2. **反射的应用场景？**
+   - 动态调用方法（框架、插件系统）
+   - 序列化/反序列化
+   - 依赖注入容器
+
+3. **`getattr` 的安全用法？**
+   - 始终提供默认值避免 AttributeError
+   - 检查属性存在再获取
 
 ### 12. 代码组织与设计模式
-#### 12.1 代码组织
-- 项目结构规范
-- 模块化设计
-- 代码复用
+
+---
+
+#### 12.1 项目结构规范
+
+```
+project/
+├── src/                    # 源代码
+│   ├── __init__.py
+│   ├── main.py            # 入口
+│   ├── config.py          # 配置
+│   ├── models/            # 数据模型
+│   ├── services/         # 业务逻辑
+│   ├── utils/            # 工具函数
+│   └── api/              # API 接口
+├── tests/                 # 测试
+│   ├── __init__.py
+│   ├── unit/
+│   └── integration/
+├── docs/                  # 文档
+├── pyproject.toml         # 项目配置
+└── README.md
+```
+
+##### 12.2 模块化设计原则
+
+```python
+# 高内聚低耦合
+# 模块应该：单一职责、接口清晰、依赖明确
+
+# 好的模块结构
+# utils/
+#   ├── __init__.py
+#   ├── logger.py       # 日志（单一职责）
+#   ├── validator.py    # 验证（单一职责）
+#   └── file_ops.py     # 文件操作（单一职责）
+
+# 避免循环依赖
+# module_a.py → module_b.py → module_a.py（循环！）
+```
+
+---
 
 #### 12.2 常用设计模式
-- 单例模式
-- 工厂模式
-- 观察者模式
-- 策略模式
-- 装饰器模式
-- 适配器模式
+
+##### 12.2.1 单例模式
+
+```python
+# 方式1：模块级单例（最简单）
+# singleton.py
+class _Singleton:
+    def __init__(self):
+        self.value = 100
+
+singleton = _Singleton()
+
+# 方式2：类单例
+class Singleton:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+s1 = Singleton()
+s2 = Singleton()
+print(s1 is s2)  # True
+
+# 方式3：元类单例
+class SingletonMeta(type):
+    _instances = {}
+    
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+```
+
+##### 12.2.2 工厂模式
+
+```python
+# 简单工厂
+class Animal:
+    pass
+
+class Dog(Animal):
+    def speak(self):
+        return "Woof!"
+
+class Cat(Animal):
+    def speak(self):
+        return "Meow!"
+
+def create_animal(kind):
+    animals = {"dog": Dog, "cat": Cat}
+    return animals[kind]()
+
+# 工厂方法
+class AnimalFactory:
+    def create_dog(self):
+        return Dog()
+    
+    def create_cat(self):
+        return Cat()
+
+# 抽象工厂
+class AbstractFactory:
+    def create_product_a(self):
+        raise NotImplementedError
+    
+    def create_product_b(self):
+        raise NotImplementedError
+```
+
+##### 12.2.3 观察者模式
+
+```python
+class EventManager:
+    """事件管理器"""
+    def __init__(self):
+        self._listeners = {}
+    
+    def subscribe(self, event, callback):
+        if event not in self._listeners:
+            self._listeners[event] = []
+        self._listeners[event].append(callback)
+    
+    def unsubscribe(self, event, callback):
+        if event in self._listeners:
+            self._listeners[event].remove(callback)
+    
+    def notify(self, event, *args, **kwargs):
+        if event in self._listeners:
+            for callback in self._listeners[event]:
+                callback(*args, **kwargs)
+
+# 使用
+manager = EventManager()
+
+def on_click(data):
+    print(f"点击: {data}")
+
+manager.subscribe("click", on_click)
+manager.notify("click", {"x": 100, "y": 200})
+```
+
+##### 12.2.4 策略模式
+
+```python
+from abc import ABC, abstractmethod
+
+# 策略接口
+class SortStrategy(ABC):
+    @abstractmethod
+    def sort(self, data: list) -> list:
+        pass
+
+# 具体策略
+class QuickSort(SortStrategy):
+    def sort(self, data):
+        if len(data) <= 1:
+            return data
+        pivot = data[len(data) // 2]
+        left = [x for x in data if x < pivot]
+        middle = [x for x in data if x == pivot]
+        right = [x for x in data if x > pivot]
+        return self.sort(left) + middle + self.sort(right)
+
+class BubbleSort(SortStrategy):
+    def sort(self, data):
+        result = data.copy()
+        n = len(result)
+        for i in range(n):
+            for j in range(0, n-i-1):
+                if result[j] > result[j+1]:
+                    result[j], result[j+1] = result[j+1], result[j]
+        return result
+
+# 上下文
+class Sorter:
+    def __init__(self, strategy: SortStrategy):
+        self.strategy = strategy
+    
+    def set_strategy(self, strategy):
+        self.strategy = strategy
+    
+    def sort(self, data):
+        return self.strategy.sort(data)
+
+sorter = Sorter(QuickSort())
+print(sorter.sort([3, 1, 4, 1, 5]))
+```
+
+##### 12.2.5 适配器模式
+
+```python
+# 目标接口
+class Target:
+    def request(self):
+        return "Target: 默认行为"
+
+# 需要适配的类
+class Adaptee:
+    def specific_request(self):
+        return ".daednatseuT"
+
+# 适配器
+class Adapter(Target):
+    def __init__(self, adaptee):
+        self.adaptee = adaptee
+    
+    def request(self):
+        return self.adaptee.specific_request()[::-1]
+
+# 使用
+adaptee = Adaptee()
+adapter = Adapter(adaptee)
+print(adapter.request())  # Target: 默认行为
+```
+
+---
+
+#### 📋 设计模式速查表
+
+| 模式 | 适用场景 |
+|------|----------|
+| 单例 | 全局唯一实例 |
+| 工厂 | 创建对象族 |
+| 观察者 | 事件订阅/发布 |
+| 策略 | 算法可切换 |
+| 适配器 | 接口兼容 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **单例模式的实现方式？**
+   - 模块级单例（最简单）
+   - 类级单例（`__new__`）
+   - 元类单例（更安全）
+
+2. **观察者模式的优点？**
+   - 解耦发布者和订阅者
+   - 动态添加/移除订阅者
+   - 事件驱动编程
+
+3. **策略模式 vs 简单 if-else？**
+   - 策略模式更 OCP（开闭原则）
+   - 新增算法不需要修改上下文
+   - 适合多种可切换算法
 
 ### 13. 测试
-- unittest 模块
-- pytest 框架
-- 测试驱动开发（TDD）
-- Mock 与 Patch
-- 覆盖率测试
+
+---
+
+#### 13.1 unittest 模块
+
+```python
+import unittest
+
+class TestMath(unittest.TestCase):
+    
+    def setUp(self):
+        """每个测试前执行"""
+        self.numbers = [1, 2, 3, 4, 5]
+    
+    def tearDown(self):
+        """每个测试后执行"""
+        pass
+    
+    def test_add(self):
+        self.assertEqual(1 + 1, 2)
+    
+    def test_sum(self):
+        self.assertEqual(sum(self.numbers), 15)
+    
+    def test_raises(self):
+        with self.assertRaises(ZeroDivisionError):
+            1 / 0
+    
+    @unittest.skip("跳过此测试")
+    def test_skipped(self):
+        pass
+
+# 运行测试
+if __name__ == "__main__":
+    unittest.main()
+```
+
+##### 13.1.1 常用断言
+
+```python
+# 断言方法
+self.assertEqual(a, b)           # a == b
+self.assertNotEqual(a, b)         # a != b
+self.assertTrue(x)               # bool(x) is True
+self.assertFalse(x)              # bool(x) is False
+self.assertIs(a, b)              # a is b（同一对象）
+self.assertIsNone(x)             # x is None
+self.assertIn(a, b)              # a in b
+self.assertIsInstance(a, b)      # isinstance(a, b)
+self.assertRaises(Error)         # 抛出异常
+self.assertAlmostEqual(a, b)     # a ≈ b（浮点数比较）
+```
+
+---
+
+#### 13.2 pytest 框架
+
+```bash
+# 安装
+pip install pytest
+
+# 运行
+pytest tests/
+pytest tests/test_file.py::test_function
+pytest -v  # 详细输出
+pytest -k "test_name"  # 按名称过滤
+```
+
+##### 13.2.1 基础用法
+
+```python
+# test_example.py
+import pytest
+
+def test_add():
+    assert 1 + 1 == 2
+
+def test_list():
+    assert [1, 2, 3] == [1, 2, 3]
+
+# 使用 fixture
+@pytest.fixture
+def numbers():
+    return [1, 2, 3]
+
+def test_sum(numbers):
+    assert sum(numbers) == 6
+
+# 参数化测试
+@pytest.mark.parametrize("a,b,expected", [
+    (1, 2, 3),
+    (2, 3, 5),
+    (10, 20, 30),
+])
+def test_add_param(a, b, expected):
+    assert a + b == expected
+```
+
+##### 13.2.2 Mock 与 Patch
+
+```python
+from unittest.mock import Mock, patch, MagicMock
+
+# Mock 对象
+def test_mock():
+    mock = Mock()
+    mock.method.return_value = "result"
+    
+    mock.method("arg")
+    mock.method.assert_called_with("arg")
+
+# patch 装饰器
+@patch("module.ClassName")
+def test_patch_class(mock_class):
+    mock_class.return_value.method.return_value = "mocked"
+    from module import function_using_class
+    result = function_using_class()
+    assert result == "mocked"
+
+# patch 上下文管理器
+def test_patch_context():
+    with patch("module.func") as mock_func:
+        mock_func.return_value = "patched"
+        from module import caller
+        result = caller()
+        assert result == "patched"
+
+# MagicMock（自动创建属性和方法）
+def test_magic_mock():
+    mock = MagicMock()
+    mock.attr.method(1, 2, 3)
+    mock.attr.method.assert_called_with(1, 2, 3)
+```
+
+##### 13.2.3 覆盖率测试
+
+```bash
+# 安装 coverage
+pip install coverage
+
+# 运行覆盖率
+coverage run -m pytest tests/
+coverage report        # 文本报告
+coverage html         # HTML 报告
+coverage report -m     # 显示未覆盖行
+```
+
+---
+
+#### 📋 测试速查表
+
+| 工具 | 说明 |
+|------|------|
+| `unittest` | 标准库单元测试框架 |
+| `pytest` | 第三方测试框架 |
+| `Mock` | 模拟对象 |
+| `patch` | 替换对象/函数 |
+| `coverage` | 覆盖率统计 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **unittest 和 pytest 的区别？**
+   - `unittest`：Python 标准库，类风格
+   - `pytest`：更简洁，支持 `assert`，fixtures 更强大
+
+2. **Mock 和 MagicMock 的区别？**
+   - `Mock`：需要手动配置返回值
+   - `MagicMock`：自动创建子 Mock 对象
+
+3. **Fixture 的作用？**
+   - 提供测试前置条件
+   - 共享测试数据
+   - 自动清理资源
+
+4. **什么是 TDD？**
+   - Test-Driven Development
+   - 先写测试，再写实现
+   - 红色（失败）→ 绿色（通过）→ 重构
 
 ### 14. 高级数据处理
-- 正则表达式（re 模块）
-- 序列化与反序列化（pickle, json）
-- 数据类（@dataclass）
-- 枚举类（enum 模块）
-- collections 模块（Counter, deque, defaultdict, OrderedDict）
+
+---
+
+#### 14.1 正则表达式（re 模块）
+
+##### 14.1.1 基本模式
+
+```python
+import re
+
+# 匹配
+pattern = r"hello"
+text = "hello world"
+match = re.match(pattern, text)
+print(match.group())  # hello
+
+# 搜索
+pattern = r"world"
+text = "hello world"
+search = re.search(pattern, text)
+print(search.group())  # world
+
+# 替换
+pattern = r"\d+"
+text = "price: 100, quantity: 200"
+result = re.sub(pattern, "X", text)
+print(result)  # price: X, quantity: X
+
+# 分割
+pattern = r"[,\s]+"
+text = "a,b c,d"
+print(re.split(pattern, text))  # ['a', 'b', 'c', 'd']
+```
+
+##### 14.1.2 常用正则模式
+
+```python
+# 字符类
+r"\d"      # 数字 [0-9]
+r"\D"      # 非数字
+r"\w"      # 单词字符 [a-zA-Z0-9_]
+r"\W"      # 非单词字符
+r"\s"      # 空白字符
+r"\S"      # 非空白字符
+r"."       # 任意字符（除换行）
+
+# 数量词
+r"*"       # 0次或多次
+r"+"       # 1次或多次
+r"?"       # 0次或1次
+r"{n}"     # 正好n次
+r"{n,}"    # n次或多次
+r"{n,m}"   # n到m次
+
+# 边界
+r"^"       # 行首
+r"$"       # 行尾
+r"\b"      # 单词边界
+r"\B"      # 非单词边界
+```
+
+##### 14.1.3 分组和捕获
+
+```python
+# 分组
+pattern = r"(\d{4})-(\d{2})-(\d{2})"
+text = "2024-01-15"
+match = re.match(pattern, text)
+
+print(match.group(1))   # 2024
+print(match.group(2))   # 01
+print(match.group(3))   # 15
+print(match.groups())   # ('2024', '01', '15')
+
+# 命名分组
+pattern = r"(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})"
+match = re.match(pattern, text)
+print(match.group("year"))   # 2024
+
+# 非捕获分组
+pattern = r"(?:\d{4})-(?:\d{2})"
+```
+
+---
+
+#### 14.2 数据类（@dataclass）
+
+```python
+from dataclasses import dataclass, field
+from typing import List
+
+@dataclass
+class Point:
+    x: float
+    y: float
+    
+    def distance_to_origin(self):
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+
+@dataclass
+class User:
+    name: str
+    age: int
+    email: str = ""  # 带默认值
+    tags: List[str] = field(default_factory=list)  # 默认工厂
+
+# 使用
+user = User("Alice", 30, "alice@example.com")
+print(user)
+# User(name='Alice', age=30, email='alice@example.com', tags=[])
+```
+
+---
+
+#### 14.3 枚举类（enum）
+
+```python
+from enum import Enum, auto
+
+class Status(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+# 使用
+print(Status.PENDING.value)          # pending
+print(Status["PENDING"])             # Status.PENDING
+print(Status.PENDING.name)           # PENDING
+
+# 自动赋值
+class Priority(Enum):
+    LOW = auto()
+    MEDIUM = auto()
+    HIGH = auto()
+
+# IntEnum（可当整数使用）
+from enum import IntEnum
+
+class Level(IntEnum):
+    DEBUG = 10
+    INFO = 20
+    WARNING = 30
+    ERROR = 40
+
+print(Level.DEBUG + Level.INFO)  # 30
+```
+
+---
+
+#### 14.4 collections 模块
+
+```python
+from collections import Counter, deque, defaultdict, OrderedDict
+
+# Counter - 计数器
+cnt = Counter(["a", "b", "c", "a", "a", "b"])
+print(cnt)           # Counter({'a': 3, 'b': 2, 'c': 1})
+print(cnt["a"])      # 3
+print(cnt.most_common(2))  # [('a', 3), ('b', 2)]
+
+# deque - 双端队列
+dq = deque([1, 2, 3])
+dq.appendleft(0)    # [0, 1, 2, 3]
+dq.append(4)        # [0, 1, 2, 3, 4]
+dq.popleft()        # 0
+dq.pop()            # 4
+
+# defaultdict - 默认值字典
+dd = defaultdict(int)
+dd["a"] += 1
+print(dd["a"])       # 1
+print(dd["b"])       # 0（自动创建，默认值0）
+
+# OrderedDict - 有序字典（Python 3.7+ 普通 dict 已有序）
+od = OrderedDict()
+od["z"] = 1
+od["a"] = 2
+print(list(od.keys()))  # ['z', 'a']
+```
+
+---
+
+#### 📋 高级数据处理速查表
+
+| 模块/类 | 说明 |
+|---------|------|
+| `re` | 正则表达式 |
+| `dataclass` | 数据类 |
+| `enum` | 枚举类 |
+| `Counter` | 计数器 |
+| `deque` | 双端队列 |
+| `defaultdict` | 默认值字典 |
+| `OrderedDict` | 有序字典 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **re.match vs re.search 的区别？**
+   - `match`：只匹配字符串开头
+   - `search`：搜索整个字符串
+
+2. **dataclass 和普通类的区别？**
+   - 自动生成 `__init__`、`__repr__`、`__eq__`
+   - 代码更简洁
+
+3. **Counter 的 most_common 返回什么？**
+   - 列表，包含 (元素, 计数) 元组
+   - 按计数降序排列
 
 ### 15. 网络编程
-- socket 编程基础
-- HTTP 请求（requests 库）
-- Web 开发框架（Flask, Django, FastAPI）
-- RESTful API 设计
+
+---
+
+#### 15.1 socket 编程
+
+```python
+import socket
+
+# TCP 服务器
+def tcp_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("localhost", 8080))
+        s.listen(5)
+        print("服务器监听 8080...")
+        
+        conn, addr = s.accept()
+        with conn:
+            print(f"连接来自 {addr}")
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                conn.sendall(data)
+
+# TCP 客户端
+def tcp_client():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect(("localhost", 8080))
+        s.sendall(b"Hello, Server!")
+        data = s.recv(1024)
+        print(f"收到: {data}")
+```
+
+##### 15.2 HTTP 请求（requests）
+
+```python
+import requests
+
+# GET 请求
+response = requests.get("https://api.example.com/users")
+print(response.status_code)
+print(response.json())
+
+# POST 请求
+payload = {"name": "Alice", "email": "alice@example.com"}
+response = requests.post("https://api.example.com/users", json=payload)
+
+# 带参数
+params = {"page": 1, "limit": 10}
+response = requests.get("https://api.example.com/users", params=params)
+
+# 设置超时
+response = requests.get("https://api.example.com/users", timeout=5)
+```
+
+##### 15.3 FastAPI 快速入门
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class User(BaseModel):
+    name: str
+    email: str
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello, World!"}
+
+@app.get("/users/{user_id}")
+def read_user(user_id: int):
+    return {"user_id": user_id}
+
+@app.post("/users")
+def create_user(user: User):
+    return {"name": user.name, "email": user.email}
+
+# 运行：uvicorn main:app --reload
+```
+
+---
+
+#### 🎯 面试高频考点
+
+1. **socket 的 stream vs datagram？**
+   - `SOCK_STREAM`：TCP，面向连接
+   - `SOCK_DGRAM`：UDP，无连接
+
+2. **requests 和 aiohttp 的区别？**
+   - `requests`：同步阻塞
+   - `aiohttp`：异步非阻塞
 
 ### 16. 数据库编程
-- SQLite 操作
-- ORM 框架（SQLAlchemy）
-- 数据库连接池
+
+---
+
+#### 16.1 SQLite 操作
+
+```python
+import sqlite3
+
+# 创建连接
+conn = sqlite3.connect("test.db")
+cursor = conn.cursor()
+
+# 创建表
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE
+    )
+""")
+
+# 插入数据
+cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", 
+               ("Alice", "alice@example.com"))
+
+# 查询
+cursor.execute("SELECT * FROM users")
+rows = cursor.fetchall()
+for row in rows:
+    print(row)
+
+# 事务提交
+conn.commit()
+conn.close()
+```
+
+##### 16.2 SQLAlchemy ORM
+
+```python
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True)
+
+# 创建引擎和会话
+engine = create_engine("sqlite:///test.db")
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# CRUD 操作
+user = User(name="Alice", email="alice@example.com")
+session.add(user)
+session.commit()
+
+users = session.query(User).filter_by(name="Alice").all()
+for user in users:
+    print(user.name, user.email)
+
+session.close()
+```
+
+---
+
+#### 📋 数据库速查表
+
+| 操作 | SQLAlchemy |
+|------|-----------|
+| 创建连接 | `create_engine()` |
+| 定义模型 | `declarative_base()` |
+| 创建表 | `Base.metadata.create_all()` |
+| 插入 | `session.add()` |
+| 查询 | `session.query()` |
+| 提交 | `session.commit()` |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **SQLAlchemy 的 ORM vs Core？**
+   - ORM：对象关系映射，面向对象操作
+   - Core：SQL 表达式语言，更接近 SQL
+
+2. **什么是 SQL 注入？如何避免？**
+   - 用户输入拼接到 SQL 中执行
+   - 使用参数化查询（`?` 占位符）
 
 ---
 
