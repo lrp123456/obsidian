@@ -4171,31 +4171,748 @@ print(MyClass.created_by)  # Meta
 ---
 
 ### 2. 迭代器与生成器
-#### 2.1 迭代器
-- 迭代器协议（__iter__, __next__）
-- iter() 与 next() 函数
-- 自定义迭代器
 
-#### 2.2 生成器
-- 生成器函数（yield）
-- 生成器表达式
-- yield from 语法
-- 生成器状态与方法（send, throw, close）
+> [!TIP] Java 开发者视角
+> Python 的迭代器与 Java 类似，但实现更简洁：
+> - Python 用 `__iter__` 和 `__next__` 协议
+> - Python 的 `yield` 在 Java 中没有等价物（类似 Stream API 的懒加载）
+> - 生成器是 Python 特有的轻量级迭代器
+
+---
+
+#### 2.1 迭代器协议
+
+##### 2.1.1 基本概念
+
+```python
+# 迭代器协议：实现 __iter__ 和 __next__
+class Counter:
+    def __init__(self, limit):
+        self.limit = limit
+        self.current = 0
+    
+    def __iter__(self):
+        """返回迭代器对象"""
+        return self
+    
+    def __next__(self):
+        """返回下一个元素"""
+        if self.current >= self.limit:
+            raise StopIteration  # 迭代结束
+        self.current += 1
+        return self.current - 1
+
+# 使用
+counter = Counter(3)
+for i in counter:
+    print(i)  # 0, 1, 2
+
+# 手动迭代
+counter = Counter(3)
+print(next(counter))  # 0
+print(next(counter))  # 1
+print(next(counter))  # 2
+next(counter)         # StopIteration
+```
+
+**Java 对比**：
+```java
+// Java 迭代器
+Iterator<Integer> counter = Arrays.asList(0, 1, 2).iterator();
+while (counter.hasNext()) {
+    System.out.println(counter.next());
+}
+```
+
+##### 2.1.2 iter() 与 next() 函数
+
+```python
+# iter() - 获取迭代器
+lst = [1, 2, 3]
+it = iter(lst)  # 等同于 lst.__iter__()
+
+# next() - 获取下一个元素
+print(next(it))  # 1
+print(next(it))  # 2
+print(next(it))  # 3
+next(it)          # StopIteration
+
+# next() 带默认值（不抛异常）
+print(next(it, -1))  # -1（迭代结束后返回默认值）
+```
+
+##### 2.1.3 可迭代对象 vs 迭代器
+
+```python
+# 可迭代对象：实现了 __iter__（返回迭代器）
+# 迭代器：实现了 __iter__ 和 __next__
+
+# list 是可迭代对象，不是迭代器
+lst = [1, 2, 3]
+print(hasattr(lst, '__iter__'))   # True
+print(hasattr(lst, '__next__'))   # False
+
+# iter(lst) 返回迭代器
+it = iter(lst)
+print(hasattr(it, '__iter__'))   # True
+print(hasattr(it, '__next__'))   # True
+```
+
+---
+
+#### 2.2 生成器（Generator）
+
+##### 2.2.1 生成器函数（yield）
+
+```python
+# 生成器函数：使用 yield 返回值
+def count_up_to(n):
+    """生成 0 到 n 的数字"""
+    current = 0
+    while current < n:
+        yield current
+        current += 1
+
+# 使用生成器
+gen = count_up_to(5)
+print(type(gen))        # <class 'generator'>
+print(next(gen))        # 0
+print(next(gen))        # 1
+for i in gen:           # 2, 3, 4（从断点继续）
+    print(i)
+
+# 常见错误：忘记 return
+def generator_with_return(n):
+    for i in range(n):
+        yield i
+    return "完成"  # 生成器可以包含 return
+
+gen = generator_with_return(3)
+for i in gen:
+    print(i)  # 0, 1, 2
+try:
+    next(gen)  # StopIteration，但 .return 值在异常中
+except StopIteration as e:
+    print(f"返回值: {e.value}")  # 返回值: 完成
+```
+
+##### 2.2.2 生成器表达式（类似列表推导式）
+
+```python
+# 列表推导式（立即求值）
+squares_list = [x**2 for x in range(1000000)]  # 占用大量内存
+
+# 生成器表达式（惰性求值）
+squares_gen = (x**2 for x in range(1000000))  # 占用很少内存
+
+# 使用
+for sq in squares_gen:
+    print(sq)
+    if sq > 100:
+        break
+
+# 转换为列表
+gen = (x**2 for x in range(5))
+squares_list = list(gen)  # [0, 1, 4, 9, 16]
+
+# sum 等内置函数可以直接使用生成器
+total = sum(x**2 for x in range(1000))  # 无需 list()
+```
+
+##### 2.2.3 yield from 语法
+
+```python
+# yield from - 委托给子生成器
+def flat_generator(nested_list):
+    """扁平化嵌套列表"""
+    for sublist in nested_list:
+        for item in sublist:
+            yield item
+
+# 等同于
+def flat_generator_v2(nested_list):
+    for sublist in nested_list:
+        yield from sublist
+
+# 使用
+nested = [[1, 2], [3, 4], [5]]
+for item in flat_generator(nested):
+    print(item)  # 1, 2, 3, 4, 5
+```
+
+##### 2.2.4 生成器状态与方法
+
+```python
+# send() - 向生成器发送值
+def echo():
+    """回声生成器"""
+    while True:
+        received = yield "等待输入..."
+        print(f"收到: {received}")
+
+gen = echo()
+print(next(gen))           # 等待输入...
+print(gen.send("Hello"))   # 收到: Hello / 等待输入...
+print(gen.send("World"))   # 收到: World / 等待输入...
+
+# throw() - 向生成器抛出异常
+def broken():
+    yield 1
+    yield 2
+
+gen = broken()
+try:
+    gen.throw(ValueError, ValueError("故意的错误"))
+except ValueError as e:
+    print(f"捕获异常: {e}")  # 捕获异常: 故意的错误
+
+# close() - 关闭生成器
+def count():
+    try:
+        yield 1
+        yield 2
+    except GeneratorExit:
+        print("生成器关闭")
+        raise
+
+gen = count()
+print(next(gen))  # 1
+gen.close()       # 生成器关闭
+```
+
+---
+
+#### 2.3 实战：生成器应用场景
+
+```python
+# 场景1：大文件处理（逐行读取，不占用大量内存）
+def read_large_file(filepath):
+    """大文件逐行读取"""
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            yield line.strip()
+
+# 场景2：数据管道
+def process_pipeline(data):
+    """数据处理管道"""
+    for item in data:
+        processed = item.upper()
+        if len(processed) > 5:
+            yield processed
+
+# 场景3：无限序列
+def fibonacci():
+    """斐波那契生成器（无限）"""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+
+# 取前10个
+fibs = fibonacci()
+for i in range(10):
+    print(next(fibs))  # 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
+```
+
+> [!TIP] 生成器 vs 列表
+> - **列表**：适合小数据量，需要随机访问时
+> - **生成器**：适合大数据量、流式处理、无限序列
+> - 生成器**只能迭代一次**，消耗后需要重新创建
+
+---
+
+#### 📋 迭代器与生成器速查表
+
+| 概念 | 代码 | 说明 |
+|------|------|------|
+| 迭代器协议 | `__iter__`, `__next__` | 实现迭代器 |
+| StopIteration | 迭代结束 | 迭代完成时抛出 |
+| yield | 生成器函数 | 惰性返回值 |
+| 生成器表达式 | `(x for x in items)` | 惰性推导式 |
+| yield from | 委托给子生成器 | 扁平化嵌套迭代 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **迭代器和生成器的区别？**
+   - 迭代器是实现了 `__iter__` 和 `__next__` 的对象
+   - 生成器是使用 `yield` 的函数，返回生成器对象
+   - 生成器是一种特殊的迭代器
+
+2. **生成器的优点？**
+   - 惰性求值，不占用大量内存
+   - 可以表示无限序列
+   - 适合大文件处理和数据管道
+
+3. **生成器只能迭代一次的原因？**
+   - 生成器没有保存完整数据
+   - 迭代过程中逐个生成值，消耗后无法重置
+
+4. **`yield from` 和 `yield` 的区别？**
+   - `yield` 返回单个值
+   - `yield from` 委托给子生成器，自动迭代子生成器所有值
 
 ### 3. 装饰器
-- 装饰器原理与语法糖
-- 函数装饰器
-- 带参数的装饰器
-- 类装饰器
-- 装饰器链
-- functools.wraps 保留元信息
-- 常用内置装饰器（@property, @classmethod, @staticmethod）
+
+> [!TIP] Java 开发者视角
+> Python 装饰器类似 Java 的 AOP（Aspect-Oriented Programming）：
+> - 装饰器是包装函数的函数
+> - `@decorator` 语法类似 Java 注解
+> - Python 装饰器更简洁，无需字节码增强
+
+---
+
+#### 3.1 装饰器原理
+
+##### 3.1.1 基本概念
+
+```python
+# 装饰器：包装函数，增强功能
+def my_decorator(func):
+    def wrapper(*args, **kwargs):
+        print("Before calling")
+        result = func(*args, **kwargs)
+        print("After calling")
+        return result
+    return wrapper
+
+# 使用 @语法糖
+@my_decorator
+def say_hello():
+    print("Hello!")
+
+say_hello()
+# Before calling
+# Hello!
+# After calling
+```
+
+**等同于**：
+```python
+def say_hello():
+    print("Hello!")
+
+say_hello = my_decorator(say_hello)
+```
+
+##### 3.1.2 函数装饰器
+
+```python
+# 日志装饰器
+def log(func):
+    @wraps(func)  # 保留原函数元信息
+    def wrapper(*args, **kwargs):
+        print(f"调用 {func.__name__}")
+        result = func(*args, **kwargs)
+        print(f"完成 {func.__name__}")
+        return result
+    return wrapper
+
+@log
+def add(a, b):
+    """相加函数"""
+    return a + b
+
+print(add.__name__)  # add（而非 wrapper）
+print(add.__doc__)   # 相加函数
+```
+
+##### 3.1.3 带参数的装饰器
+
+```python
+# 带参数的装饰器（需要三层函数）
+def repeat(times=1):
+    """重复执行函数指定次数"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            results = []
+            for _ in range(times):
+                result = func(*args, **kwargs)
+                results.append(result)
+            return results
+        return wrapper
+    return decorator
+
+@repeat(times=3)
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("Alice"))  # ['Hello, Alice!', 'Hello, Alice!', 'Hello, Alice!']
+```
+
+---
+
+#### 3.2 类装饰器
+
+```python
+from functools import wraps
+
+class CallCounter:
+    """类装饰器：计数函数调用次数"""
+    def __init__(self, func):
+        self.count = 0
+        self.func = func
+        wraps(func)(self)  # 保留元信息
+    
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"{self.func.__name__} called {self.count} times")
+        return self.func(*args, **kwargs)
+
+@CallCounter
+def greet():
+    print("Hello!")
+
+greet()  # greet called 1 times / Hello!
+greet()  # greet called 2 times / Hello!
+print(greet.count)  # 2
+```
+
+---
+
+#### 3.3 装饰器链
+
+```python
+# 多个装饰器（从下到上执行）
+@decorator1
+@decorator2
+@decorator3
+def func():
+    pass
+
+# 等同于
+func = decorator1(decorator2(decorator3(func)))
+
+# 示例
+def bold(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return f"<b>{func(*args, **kwargs)}</b>"
+    return wrapper
+
+def italic(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return f"<i>{func(*args, **kwargs)}</i>"
+    return wrapper
+
+@bold
+@italic
+def text():
+    return "Hello"
+
+print(text())  # <b><i>Hello</i></b>
+```
+
+---
+
+#### 3.4 functools.wraps
+
+```python
+from functools import wraps
+
+# 不使用 wraps
+def decorator(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@decorator
+def original():
+    """原始文档"""
+    pass
+
+print(original.__name__)    # wrapper（错误！）
+print(original.__doc__)    # None（错误！）
+
+# 使用 wraps
+def correct_decorator(func):
+    @wraps(func)  # 复制 func 的元信息到 wrapper
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@correct_decorator
+def original_v2():
+    """原始文档"""
+    pass
+
+print(original_v2.__name__)  # original_v2（正确！）
+print(original_v2.__doc__)  # 原始文档（正确！）
+```
+
+---
+
+#### 3.5 常用内置装饰器
+
+```python
+# @property - 将方法转为属性
+class Circle:
+    def __init__(self, radius):
+        self._radius = radius
+    
+    @property
+    def radius(self):
+        return self._radius
+    
+    @radius.setter
+    def radius(self, value):
+        if value < 0:
+            raise ValueError("半径不能为负")
+        self._radius = value
+    
+    @property
+    def area(self):
+        return 3.14 * self._radius ** 2
+
+c = Circle(5)
+print(c.radius)  # 5（像访问属性一样）
+c.radius = 10    # 设置值
+print(c.area)     # 314.0
+
+# @classmethod - 类方法
+class Config:
+    _config = {}
+    
+    @classmethod
+    def load(cls, filepath):
+        with open(filepath) as f:
+            cls._config = json.load(f)
+        return cls
+    
+    @classmethod
+    def get(cls, key, default=None):
+        return cls._config.get(key, default)
+
+# @staticmethod - 静态方法
+class Math:
+    @staticmethod
+    def is_valid(n):
+        return n > 0
+```
+
+---
+
+#### 📋 装饰器速查表
+
+| 装饰器 | 说明 |
+|--------|------|
+| `@property` | 将方法转为属性 |
+| `@classmethod` | 类方法，第一个参数是 cls |
+| `@staticmethod` | 静态方法，无隐式参数 |
+| `@wraps(func)` | 保留原函数元信息 |
+| `@abstractmethod` | 抽象方法（ABC） |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **装饰器的作用？**
+   - 增强函数功能，不修改原函数代码
+   - 实现日志、缓存、权限验证等功能
+   - AOP 编程思想
+
+2. **带参数的装饰器如何实现？**
+   - 需要三层函数：参数 → 装饰器 → wrapper
+   - 外层接收参数，中层接收函数，内层包装函数
+
+3. **多个装饰器的执行顺序？**
+   - 从下到上执行
+   - `@a @b def f()` 等同于 `a(b(f))`
+
+4. **`@wraps` 的作用？**
+   - 复制原函数的 `__name__`、`__doc__` 等元信息到 wrapper
+   - 保持函数的身份识别
 
 ### 4. 上下文管理器
-- with 语句原理
-- __enter__ 与 __exit__ 方法
-- contextlib 模块
-- @contextmanager 装饰器
+
+> [!TIP] Java 开发者视角
+> Python 的 `with` 语句类似 Java 的 try-with-resources：
+> - Python 用 `__enter__` 和 `__exit__` 协议
+> - Python 用 `@contextmanager` 简化实现
+> - Java 用 AutoCloseable 接口
+
+---
+
+#### 4.1 with 语句原理
+
+##### 4.1.1 基本语法
+
+```python
+# with 语句用于资源管理
+with open("file.txt", "r") as f:
+    content = f.read()
+# 文件自动关闭
+
+# 等同于 try-finally
+f = open("file.txt", "r")
+try:
+    content = f.read()
+finally:
+    f.close()
+```
+
+##### 4.1.2 __enter__ 与 __exit__
+
+```python
+class FileManager:
+    def __init__(self, filename, mode):
+        self.filename = filename
+        self.mode = mode
+        self.file = None
+    
+    def __enter__(self):
+        """进入 with 块时调用"""
+        self.file = open(self.filename, self.mode)
+        return self.file
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """退出 with 块时调用"""
+        self.file.close()
+        return False  # 不抑制异常
+
+# 使用
+with FileManager("test.txt", "w") as f:
+    f.write("Hello!")
+
+# with 块外文件已关闭
+```
+
+##### 4.1.3 __exit__ 参数详解
+
+```python
+class DebugContext:
+    def __enter__(self):
+        print("进入块")
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """exc_type: 异常类型（None 表示无异常）
+           exc_val: 异常值（异常对象）
+           exc_tb: 异常追溯信息"""
+        if exc_type is None:
+            print("退出块（无异常）")
+        else:
+            print(f"异常: {exc_type.__name__}: {exc_val}")
+        return False  # 返回 True 抑制异常
+
+with DebugContext():
+    print("块内操作")
+# 进入块
+# 块内操作
+# 退出块（无异常）
+
+with DebugContext():
+    raise ValueError("故意的错误")
+# 进入块
+# 异常: ValueError: 故意的错误
+# （异常继续传播）
+```
+
+---
+
+#### 4.2 contextlib 模块
+
+##### 4.2.1 @contextmanager 装饰器
+
+```python
+from contextlib import contextmanager
+
+# 用生成器简化上下文管理器
+@contextmanager
+def managed_resource(name):
+    """资源管理器"""
+    print(f"获取资源: {name}")
+    try:
+        yield name  # 返回给 with 块使用
+    finally:
+        print(f"释放资源: {name}")
+
+with managed_resource("数据库连接") as res:
+    print(f"使用 {res}")
+# 获取资源: 数据库连接
+# 使用 数据库连接
+# 释放资源: 数据库连接
+```
+
+##### 4.2.2 closing()
+
+```python
+from contextlib import closing
+from urllib.request import urlopen
+
+# 某些对象没有 __enter__/__exit__，但有 close() 方法
+with closing(urlopen("https://example.com")) as page:
+    content = page.read()
+# 自动调用 close()
+```
+
+##### 4.2.3 suppress()
+
+```python
+from contextlib import suppress
+
+# 忽略指定异常
+with suppress(FileNotFoundError):
+    os.remove("nonexistent.txt")  # 不会报错
+
+# 等同于
+try:
+    os.remove("nonexistent.txt")
+except FileNotFoundError:
+    pass
+```
+
+##### 4.2.4 redirect_stdout()
+
+```python
+from contextlib import redirect_stdout
+import io
+
+# 重定向标准输出
+buffer = io.StringIO()
+with redirect_stdout(buffer):
+    print("Hello, World!")
+
+print(buffer.getvalue())  # Hello, World!
+```
+
+---
+
+#### 📋 上下文管理器速查表
+
+| 方法/类 | 说明 |
+|---------|------|
+| `__enter__` | 进入 with 块 |
+| `__exit__` | 退出 with 块 |
+| `@contextmanager` | 生成器形式的上下文管理器 |
+| `closing()` | 适配有 close() 的对象 |
+| `suppress()` | 忽略指定异常 |
+| `redirect_stdout()` | 重定向标准输出 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **上下文管理器的作用？**
+   - 自动管理资源（文件、网络连接等）
+   - 确保资源正确释放，即使发生异常
+   - 代码更简洁
+
+2. **`__exit__` 返回 True 会怎样？**
+   - 抑制异常传播（不推荐）
+   - 异常被吞掉，调用者不知道发生了错误
+
+3. **`@contextmanager` 的原理？**
+   - 将生成器函数转换为上下文管理器
+   - `yield` 之前的代码相当于 `__enter__`
+   - `yield` 之后的代码相当于 `__exit__`
+
+4. **with 语句可以同时管理多个资源？**
+   - 可以：`with A() as a, B() as b:`
+   - Python 3.10+ 支持 `with (A() as a, B() as b):`
 
 ### 5. 元编程
 #### 5.1 动态特性
