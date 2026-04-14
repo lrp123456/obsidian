@@ -4915,63 +4915,1152 @@ print(buffer.getvalue())  # Hello, World!
    - Python 3.10+ 支持 `with (A() as a, B() as b):`
 
 ### 5. 元编程
+
+> [!TIP] Java 开发者视角
+> Python 的元编程比 Java 更强大且灵活：
+> - Python 可以动态创建类（`type()`），Java 需要反射
+> - Python 的 `__slots__` 类似 Java 的固定字段
+> - Python 的 `__getattr__` 类似 Java 的 `MethodHandle`
+> - Python 元类比 Java 注解更强大
+
+---
+
 #### 5.1 动态特性
-- 动态创建类（type()）
-- __slots__ 限制属性
-- 动态属性（__getattr__, __setattr__, __delattr__）
+
+##### 5.1.1 动态创建类（type()）
+
+```python
+# type() 可以查看类类型
+print(type(10))           # <class 'int'>
+print(type("hello"))      # <class 'str'>
+
+# type() 也可以动态创建类
+# type(class_name, bases, methods)
+MyClass = type("MyClass", (object,), {
+    "x": 100,
+    "greet": lambda self: f"Hello, I'm {self.x}"
+})
+
+# 等同于
+class MyClass:
+    x = 100
+    def greet(self):
+        return f"Hello, I'm {self.x}"
+
+# 使用动态创建的类
+obj = MyClass()
+print(obj.x)        # 100
+print(obj.greet()) # Hello, I'm 100
+```
+
+**Java 对比**：
+```java
+// Java 需要使用反射或 Proxy
+Class<?> MyClass = Class.forName("com.example.MyClass");
+// 或使用 Proxy
+Object obj = Proxy.newProxyInstance(...);
+```
+
+##### 5.1.2 __slots__ 限制属性
+
+```python
+# 正常类可以随意添加属性
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+p = Point(1, 2)
+p.z = 3  # 允许！动态添加属性
+
+# 使用 __slots__ 限制属性
+class RestrictedPoint:
+    __slots__ = ["x", "y"]  # 只允许这两个属性
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+rp = RestrictedPoint(1, 2)
+rp.z = 3  # AttributeError!
+```
+
+> [!TIP] `__slots__` 的优点
+> - 减少内存占用（不创建 `__dict__`）
+> - 防止拼写错误添加属性
+> - 提高属性访问速度
+
+##### 5.1.3 动态属性（__getattr__, __setattr__）
+
+```python
+class LazyObject:
+    """延迟加载对象 - 访问不存在属性时加载"""
+    def __init__(self, filename):
+        self.filename = filename
+        self._data = None
+    
+    def __getattr__(self, name):
+        """访问不存在属性时触发"""
+        if self._data is None:
+            self._load_data()
+        return self._data.get(name, None)
+    
+    def _load_data(self):
+        print(f"加载数据 from {self.filename}")
+        self._data = {"x": 1, "y": 2}
+
+obj = LazyObject("data.json")
+print(obj.x)    # 加载数据 from data.json / 1
+print(obj.y)    # 1（不重新加载）
+print(obj.z)    # None（属性不存在）
+```
+
+```python
+class Observable:
+    """可观察对象 - 属性变更通知"""
+    def __init__(self):
+        self._values = {}
+        self._listeners = []
+    
+    def __setattr__(self, name, value):
+        """设置任意属性时触发"""
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+        else:
+            old_value = self._values.get(name)
+            super().__setattr__(name, value)
+            self._notify(name, old_value, value)
+    
+    def _notify(self, name, old, new):
+        print(f"属性 {name} 从 {old} 变为 {new}")
+        for listener in self._listeners:
+            listener(name, old, new)
+
+obj = Observable()
+obj.name = "Alice"  # 属性 name 从 None 变为 Alice
+obj.age = 30        # 属性 age 从 None 变为 30
+```
+
+---
 
 #### 5.2 描述符
-- 描述符协议（__get__, __set__, __delete__）
-- 描述符应用
 
-#### 5.3 元类
-- type 作为元类
-- 自定义元类（__new__, __init__, __call__）
-- __metaclass__（Python 2）与 metaclass 参数
+##### 5.2.1 描述符协议
+
+```python
+# 描述符协议
+class Descriptor:
+    def __get__(self, instance, owner):
+        """获取属性"""
+        pass
+    
+    def __set__(self, instance, value):
+        """设置属性"""
+        pass
+    
+    def __delete__(self, instance):
+        """删除属性"""
+        pass
+
+# 数据描述符：实现了 __get__ 和 __set__ 或 __delete__
+# 非数据描述符：只实现了 __get__
+```
+
+##### 5.2.2 描述符应用
+
+```python
+class Range:
+    """范围描述符 - 限制值在指定范围内"""
+    def __init__(self, min_val=None, max_val=None):
+        self.min_val = min_val
+        self.max_val = max_val
+    
+    def __set_name__(self, owner, name):
+        self.name = name
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return instance.__dict__.get(self.name)
+    
+    def __set__(self, instance, value):
+        if self.min_val is not None and value < self.min_val:
+            raise ValueError(f"{self.name} 不能小于 {self.min_val}")
+        if self.max_val is not None and value > self.max_val:
+            raise ValueError(f"{self.name} 不能大于 {self.max_val}")
+        instance.__dict__[self.name] = value
+
+class Person:
+    age = Range(min_val=0, max_val=150)
+    score = Range(min_val=0, max_val=100)
+
+p = Person()
+p.age = 30    # OK
+p.age = -5     # ValueError: age 不能小于 0
+p.score = 101  # ValueError: score 不能大于 100
+```
+
+---
+
+#### 5.3 元类（Metaclass）
+
+##### 5.3.1 type 作为元类
+
+```python
+# type 是 Python 内置的元类
+print(type(type))  # <class 'type'>
+print(isinstance(type, type))  # True
+
+# 所有类都是 type 的实例
+class MyClass:
+    pass
+
+print(type(MyClass))  # <class 'type'>
+```
+
+##### 5.3.2 自定义元类
+
+```python
+# 自定义元类：在创建类时添加额外行为
+class Meta(type):
+    def __new__(mcs, name, bases, namespace):
+        """在类创建时添加属性"""
+        namespace["created_by"] = "Meta"
+        namespace["class_name"] = name
+        return super().__new__(mcs, name, bases, namespace)
+    
+    def __call__(cls, *args, **kwargs):
+        """在类实例化时添加行为"""
+        instance = super().__call__(*args, **kwargs)
+        instance._initialized = True
+        return instance
+
+class MyClass(metaclass=Meta):
+    pass
+
+print(MyClass.created_by)  # Meta
+print(MyClass.class_name)   # MyClass
+
+obj = MyClass()
+print(obj._initialized)     # True
+```
+
+**Java 对比**：
+```java
+// Java 没有等价元类
+// 但有类似概念：字节码工程、编译时注解处理
+// 如 Lombok, MapStruct
+```
+
+##### 5.3.3 元类应用场景
+
+```python
+# 场景1：单例模式
+class SingletonMeta(type):
+    _instances = {}
+    
+    def __call__(cls):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__()
+        return cls._instances[cls]
+
+class Singleton(metaclass=SingletonMeta):
+    pass
+
+a = Singleton()
+b = Singleton()
+print(a is b)  # True
+
+# 场景2：自动注册
+class RegistryMeta(type):
+    _registry = {}
+    
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        if namespace.get("_register", True):
+            mcs._registry[name] = cls
+        return cls
+    
+    @classmethod
+    def get_registry(mcs):
+        return mcs._registry.copy()
+
+class Plugin(metaclass=RegistryMeta):
+    _register = True
+
+class Extension(metaclass=RegistryMeta):
+    _register = True
+
+print(RegistryMeta.get_registry())  # {'Plugin': ..., 'Extension': ...}
+```
+
+---
+
+#### 📋 元编程速查表
+
+| 特性 | 说明 |
+|------|------|
+| `type(name, bases, dict)` | 动态创建类 |
+| `__slots__` | 限制类属性 |
+| `__getattr__` | 访问不存在属性 |
+| `__setattr__` | 设置任意属性 |
+| `metaclass=Meta` | 自定义类创建行为 |
+| `type.__new__` | 定制类创建过程 |
+| `type.__call__` | 定制类实例化过程 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **`__slots__` 的作用和限制？**
+   - 限制类只能有指定属性
+   - 减少内存占用，不创建 `__dict__`
+   - 不支持动态添加新属性
+
+2. **`__getattr__` 和 `__getattribute__` 的区别？**
+   - `__getattr__`：访问不存在属性时触发
+   - `__getattribute__`：访问所有属性时触发
+
+3. **元类和类装饰器的区别？**
+   - 类装饰器：装饰类（接收类，返回类）
+   - 元类：创建类（控制类的创建过程）
+   - 元类更底层，控制力度更强
+
+4. **什么情况下使用元类？**
+   - 需要在类创建时添加行为
+   - 实现单例模式、自动注册等模式
+   - 框架开发（如 ORM、API 框架）
 
 ### 6. 高级函数特性
-- 闭包
-- 高阶函数（map, filter, reduce）
-- 偏函数（functools.partial）
-- 函数注解与类型提示
-- 可调用对象（__call__）
+
+---
+
+#### 6.1 闭包
+
+##### 6.1.1 基本概念
+
+```python
+# 闭包：内层函数记住外层函数的变量
+def outer(x):
+    def inner(y):
+        return x + y  # 记住 x
+    return inner
+
+add_5 = outer(5)
+print(add_5(10))  # 15
+print(add_5(3))   # 8
+```
+
+> [!TIP] 闭包的记忆效应
+> 内层函数记住外层函数的变量，即使外层函数已经返回。
+
+##### 6.1.2 闭包的应用
+
+```python
+# 场景1：函数工厂
+def make_multiplier(factor):
+    def multiply(n):
+        return n * factor
+    return multiply
+
+times_3 = make_multiplier(3)
+times_5 = make_multiplier(5)
+print(times_3(10))  # 30
+print(times_5(10))  # 50
+
+# 场景2：回调函数
+def create_click_handler(action):
+    def handle_click(event):
+        print(f"点击事件: {event}")
+        action()
+    return handle_click
+
+def save_action():
+    print("保存数据")
+
+handler = create_click_handler(save_action)
+handler("click")  # 点击事件: click / 保存数据
+```
+
+---
+
+#### 6.2 高阶函数
+
+##### 6.2.1 map, filter, reduce
+
+```python
+from functools import reduce
+
+# map - 对每个元素应用函数
+numbers = [1, 2, 3, 4, 5]
+squared = list(map(lambda x: x ** 2, numbers))  # [1, 4, 9, 16, 25]
+
+# filter - 过滤元素
+evens = list(filter(lambda x: x % 2 == 0, numbers))  # [2, 4]
+
+# reduce - 累积计算
+total = reduce(lambda x, y: x + y, numbers)  # 15
+product = reduce(lambda x, y: x * y, numbers)  # 120
+
+# 组合使用
+result = reduce(
+    lambda x, y: x + y,
+    map(lambda x: x ** 2, filter(lambda x: x % 2 == 0, numbers))
+)
+# 等同于 sum(x**2 for x in numbers if x % 2 == 0)
+```
+
+**Java 对比**：
+```java
+// Java Stream API 类似
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+List<Integer> squared = numbers.stream()
+    .map(x -> x * x)
+    .collect(Collectors.toList());
+```
+
+##### 6.2.2 偏函数（functools.partial）
+
+```python
+from functools import partial
+
+# partial - 固定函数的部分参数
+def power(base, exponent):
+    return base ** exponent
+
+# 创建偏函数
+square = partial(power, exponent=2)
+cube = partial(power, exponent=3)
+
+print(square(5))   # 25
+print(cube(2))     # 8
+
+# 应用：创建带默认参数的函数
+from functools import partial
+from urllib.request import urlopen
+
+open_url = partial(urlopen, timeout=5)
+# 等同于 urlopen(url, timeout=5)
+```
+
+##### 6.2.3 函数注解与类型提示
+
+```python
+# 函数注解（不影响运行时）
+def greet(name: str, age: int = 0) -> str:
+    return f"Hello, {name}"
+
+# 查看注解
+print(greet.__annotations__)
+# {'name': <class 'str'>, 'age': <class 'int'>, 'return': <class 'str'>}
+
+# 类型提示（主要用于 IDE 和 mypy）
+from typing import List, Dict, Optional
+
+def process(items: List[int]) -> Dict[str, int]:
+    return {"count": len(items)}
+```
+
+---
+
+#### 📋 高级函数速查表
+
+| 函数 | 说明 |
+|------|------|
+| `map(func, iter)` | 对每个元素应用函数 |
+| `filter(func, iter)` | 过滤元素 |
+| `reduce(func, iter)` | 累积计算 |
+| `partial(func, *args, **kwargs)` | 创建偏函数 |
+| `lambda x: ...` | 匿名函数 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **什么是闭包？**
+   - 内层函数记住外层函数的变量
+   - 即使外层函数返回，闭包仍然可以访问那些变量
+
+2. **`map`, `filter`, `reduce` 的区别？**
+   - `map`：对每个元素应用函数，返回新列表
+   - `filter`：过滤元素，返回符合条件的元素
+   - `reduce`：累积计算，返回单个结果
+
+3. **偏函数和默认参数的区别？**
+   - 偏函数 `partial` 创建新函数对象
+   - 默认参数是函数定义的一部分
+   - 偏函数可以动态创建专用函数
 
 ### 7. 异步编程
-#### 7.1 协程基础
-- 协程概念
-- async/await 语法
-- async def 定义协程
-- await 等待协程
 
-#### 7.2 异步编程工具
-- asyncio 模块
-- 事件循环（Event Loop）
-- async with 异步上下文管理
-- async for 异步迭代器
-- 并发执行（gather, wait, create_task）
+> [!TIP] Java 开发者视角
+> Python 的异步编程类似 Java 的 CompletableFuture 和 Project Reactor：
+> - Python 用 `async/await`，Java 用 `CompletableFuture` / 虚拟线程
+> - Python 的 `asyncio` 类似 Java 的 `ExecutorService`
+> - 都是处理 IO 密集型任务的高并发方案
+
+---
+
+#### 7.1 协程基础
+
+##### 7.1.1 基本概念
+
+```python
+# async def 定义协程函数
+async def fetch_data():
+    """异步获取数据"""
+    return {"data": "example"}
+
+# 协程函数不能直接调用
+# fetch_data()  # 不能直接调用！
+
+# 需要通过 asyncio 运行
+import asyncio
+
+async def main():
+    result = await fetch_data()
+    print(result)
+
+asyncio.run(main())
+```
+
+##### 7.1.2 async/await 语法
+
+```python
+import asyncio
+
+# async def 定义协程
+async def async_function():
+    return "异步结果"
+
+# await 等待协程
+async def main():
+    # 等待协程完成
+    result = await async_function()
+    print(result)  # 异步结果
+
+asyncio.run(main())
+```
+
+> [!WARNING] 协程的错误认识
+> `async def` 不等于多线程！协程是**协作式并发**，单线程内轮流执行。
+> - CPU 密集型任务用 `multiprocessing`
+> - IO 密集型任务用 `asyncio`
+
+##### 7.1.3 协程 vs 生成器
+
+```python
+# Python 3.7+ 协程基于生成器实现
+# 但 async def 和 yield 是不同的概念
+
+# 生成器：用 yield 返回值
+def generator():
+    yield 1
+    yield 2
+
+# 协程：用 await 等待其他协程
+async def coroutine():
+    await asyncio.sleep(0)
+    return 1
+```
+
+---
+
+#### 7.2 asyncio 模块
+
+##### 7.2.1 事件循环（Event Loop）
+
+```python
+import asyncio
+
+# 获取事件循环
+loop = asyncio.get_event_loop()
+
+# 运行协程
+async def main():
+    print("Hello")
+    
+loop.run_until_complete(main())
+
+# Python 3.7+ 简化写法
+asyncio.run(main())
+```
+
+##### 7.2.2 并发执行（gather, wait）
+
+```python
+import asyncio
+
+async def task1():
+    await asyncio.sleep(1)
+    return "Task 1"
+
+async def task2():
+    await asyncio.sleep(0.5)
+    return "Task 2"
+
+async def main():
+    # gather - 并发执行多个任务
+    results = await asyncio.gather(task1(), task2())
+    print(results)  # ['Task 1', 'Task 2']
+    
+    # 按完成顺序获取结果
+    async def main_v2():
+        done, pending = await asyncio.wait(
+            [task1(), task2()],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            print(f"完成: {task.result()}")
+
+asyncio.run(main())
+```
+
+##### 7.2.3 create_task 与超时
+
+```python
+import asyncio
+
+async def main():
+    # 创建任务（不等待，立即调度）
+    task = asyncio.create_task(asyncio.sleep(1))
+    
+    # 等待任务完成
+    try:
+        await asyncio.wait_for(task, timeout=2)
+    except asyncio.TimeoutError:
+        print("超时!")
+    
+    # 取消任务
+    task = asyncio.create_task(asyncio.sleep(10))
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        print("任务被取消")
+```
+
+##### 7.2.4 async with 异步上下文管理
+
+```python
+import asyncio
+
+# 异步锁
+lock = asyncio.Lock()
+
+async def critical_section():
+    async with lock:  # 异步上下文管理器
+        print("进入临界区")
+        await asyncio.sleep(0.1)
+        print("离开临界区")
+
+async def main():
+    await asyncio.gather(
+        critical_section(),
+        critical_section()
+    )
+```
+
+##### 7.2.5 async for 异步迭代器
+
+```python
+import asyncio
+
+# 异步迭代器
+class AsyncCounter:
+    def __init__(self, limit):
+        self.limit = limit
+        self.current = 0
+    
+    def __aiter__(self):
+        return self
+    
+    async def __anext__(self):
+        if self.current >= self.limit:
+            raise StopAsyncIteration
+        self.current += 1
+        await asyncio.sleep(0.01)  # 模拟异步操作
+        return self.current - 1
+
+async def main():
+    async for i in AsyncCounter(5):
+        print(i)  # 0, 1, 2, 3, 4
+
+asyncio.run(main())
+```
+
+---
 
 #### 7.3 异步库
-- aiohttp 异步 HTTP
-- 异步数据库驱动
+
+##### 7.3.1 aiohttp 异步 HTTP
+
+```python
+import aiohttp
+import asyncio
+
+async def fetch(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+
+async def main():
+    html = await fetch("https://example.com")
+    print(len(html))
+
+asyncio.run(main())
+```
+
+##### 7.3.2 异步数据库驱动
+
+```python
+# aiomysql - 异步 MySQL
+import aiomysql
+
+async def query():
+    pool = await aiomysql.create_pool(host='localhost', port=3306,
+                                     user='root', password='password',
+                                     db='test')
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("SELECT * FROM users")
+            result = await cur.fetchall()
+    pool.close()
+    await pool.wait_closed()
+    return result
+
+# asyncpg - 异步 PostgreSQL
+import asyncpg
+
+async def query():
+    conn = await asyncpg.connect('postgresql://user:password@localhost/test')
+    result = await conn.fetch('SELECT * FROM users')
+    await conn.close()
+    return result
+```
+
+---
+
+#### 7.4 实战：异步 Agent
+
+```python
+import asyncio
+import aiohttp
+from typing import Any
+
+class AsyncAgent:
+    """异步 Agent（简化版）"""
+    
+    def __init__(self, model_name: str = "gpt-4"):
+        self.model_name = model_name
+        self.session = None
+    
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, *args):
+        await self.session.close()
+    
+    async def chat(self, message: str) -> str:
+        """发送消息（模拟）"""
+        await asyncio.sleep(0.1)  # 模拟 API 调用
+        return f"Echo: {message}"
+    
+    async def batch_chat(self, messages: list[str]) -> list[str]:
+        """批量聊天（并发）"""
+        tasks = [self.chat(msg) for msg in messages]
+        return await asyncio.gather(*tasks)
+
+async def main():
+    async with AsyncAgent() as agent:
+        results = await agent.batch_chat(["Hello", "World", "Test"])
+        for r in results:
+            print(r)
+
+asyncio.run(main())
+```
+
+---
+
+#### 📋 异步编程速查表
+
+| 语法/函数 | 说明 |
+|----------|------|
+| `async def` | 定义协程函数 |
+| `await` | 等待协程完成 |
+| `asyncio.run()` | 运行协程 |
+| `asyncio.gather()` | 并发执行多个协程 |
+| `asyncio.create_task()` | 创建任务 |
+| `asyncio.wait_for()` | 超时控制 |
+| `asyncio.Lock()` | 异步锁 |
+| `async with` | 异步上下文管理器 |
+| `async for` | 异步迭代器 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **协程和线程的区别？**
+   - 线程：抢占式多任务，操作系统调度
+   - 协程：协作式多任务，代码自己控制切换
+   - 协程更轻量，无需上下文切换
+
+2. **什么时候用 asyncio？**
+   - IO 密集型任务（网络请求、文件操作）
+   - 需要高并发但不想用线程
+   - CPU 密集型任务不适合
+
+3. **为什么 asyncio 单线程可以并发？**
+   - IO 等待时让出控制权
+   - 事件循环调度多个协程
+   - 本质是协作式并发
+
+4. **`async def` 和 `def` 的区别？**
+   - `def` 返回普通值
+   - `async def` 返回协程对象，需要 await 执行
+
+5. **如何处理异步异常？**
+   - `try/except` 可以捕获协程中的异常
+   - `asyncio.wait_for` 可设置超时取消
 
 ### 8. 并发与并行
-#### 8.1 多线程
-- threading 模块
-- Thread 类
-- 线程同步（Lock, RLock, Semaphore, Event, Condition）
-- 线程池（ThreadPoolExecutor）
-- GIL（全局解释器锁）
 
-#### 8.2 多进程
-- multiprocessing 模块
-- Process 类
-- 进程间通信（Queue, Pipe, Shared Memory）
-- 进程池（ProcessPoolExecutor）
+> [!TIP] Java 开发者视角
+> Python 的并发编程与 Java 类似：
+> - `threading` ≈ Java 的 Thread
+> - `multiprocessing` ≈ Java 的 Process（但 Python 更直接）
+> - Python 有 GIL，CPU 密集型任务需要用 multiprocessing
 
-#### 8.3 concurrent.futures
-- Future 对象
-- Executor 抽象类
-- submit() 与 map()
+---
+
+#### 8.1 多线程（threading）
+
+##### 8.1.1 基本用法
+
+```python
+import threading
+import time
+
+def worker(n):
+    """工作线程"""
+    print(f"线程 {n} 开始")
+    time.sleep(1)
+    print(f"线程 {n} 结束")
+
+# 创建线程
+threads = []
+for i in range(3):
+    t = threading.Thread(target=worker, args=(i,))
+    threads.append(t)
+    t.start()
+
+# 等待所有线程完成
+for t in threads:
+    t.join()
+
+print("所有线程完成")
+```
+
+**Java 对比**：
+```java
+// Java
+Thread t1 = new Thread(() -> {
+    System.out.println("线程开始");
+});
+t1.start();
+t1.join();
+```
+
+##### 8.1.2 线程同步（Lock, RLock, Semaphore）
+
+```python
+import threading
+
+# Lock - 互斥锁
+counter = 0
+lock = threading.Lock()
+
+def increment():
+    global counter
+    for _ in range(100000):
+        with lock:
+            counter += 1
+
+# RLock - 可重入锁（同一线程可多次获取）
+rlock = threading.RLock()
+rlock.acquire()
+rlock.acquire()  # 不会死锁
+rlock.release()
+rlock.release()
+
+# Semaphore - 信号量（限制并发数）
+semaphore = threading.Semaphore(3)  # 最多3个并发
+
+def limited_access():
+    with semaphore:
+        print("进行受限访问")
+        time.sleep(1)
+
+# Event - 事件（线程间通信）
+event = threading.Event()
+
+def waiter():
+    print("等待事件...")
+    event.wait()  # 阻塞等待
+    print("事件触发!")
+
+def setter():
+    time.sleep(2)
+    event.set()  # 触发事件
+
+# Condition - 条件变量
+condition = threading.Condition()
+
+def consumer():
+    with condition:
+        while not data_ready:
+            condition.wait()
+        print("消费数据")
+
+def producer():
+    global data_ready
+    time.sleep(1)
+    with condition:
+        data_ready = True
+        condition.notify()
+```
+
+##### 8.1.3 线程池（ThreadPoolExecutor）
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+import time
+
+def task(n):
+    time.sleep(0.1)
+    return n ** 2
+
+# 创建线程池
+with ThreadPoolExecutor(max_workers=4) as executor:
+    # 提交任务
+    future = executor.submit(task, 5)
+    print(future.result())  # 25
+    
+    # map - 批量提交
+    results = list(executor.map(task, range(5)))
+    print(results)  # [0, 1, 4, 9, 16]
+```
+
+---
+
+#### 8.2 GIL（全局解释器锁）
+
+> [!WARNING] Python 的 GIL 限制
+> CPython 的 GIL 导致同一时刻只有一个线程执行 Python 字节码。
+> - **CPU 密集型任务**：用 `multiprocessing`
+> - **IO 密集型任务**：用 `threading` 或 `asyncio`
+
+```python
+import threading
+import time
+
+# CPU 密集型任务（GIL 导致性能差）
+def cpu_task():
+    total = 0
+    for i in range(10000000):
+        total += i
+    return total
+
+# IO 密集型任务（GIL 影响小）
+def io_task():
+    time.sleep(1)
+    return "Done"
+
+# 线程1：IO 密集型 - 性能好
+t1 = threading.Thread(target=io_task)
+t1.start()
+t1.join()
+
+# 线程2：CPU 密集型 - 性能差（被 GIL 限制）
+t2 = threading.Thread(target=cpu_task)
+t2.start()
+t2.join()
+```
+
+---
+
+#### 8.3 多进程（multiprocessing）
+
+##### 8.3.1 基本用法
+
+```python
+import multiprocessing
+import time
+
+def worker(n):
+    """工作进程"""
+    print(f"进程 {n} 开始")
+    time.sleep(1)
+    print(f"进程 {n} 结束")
+    return n ** 2
+
+if __name__ == "__main__":  # Windows 必须
+    # 创建进程
+    processes = []
+    for i in range(3):
+        p = multiprocessing.Process(target=worker, args=(i,))
+        processes.append(p)
+        p.start()
+    
+    # 等待完成
+    for p in processes:
+        p.join()
+```
+
+##### 8.3.2 进程间通信（Queue, Pipe）
+
+```python
+import multiprocessing
+
+# Queue - 进程安全队列
+def producer(queue):
+    for i in range(5):
+        queue.put(i)
+    queue.put(None)  # 发送结束信号
+
+def consumer(queue):
+    while True:
+        item = queue.get()
+        if item is None:
+            break
+        print(f"消费: {item}")
+
+if __name__ == "__main__":
+    queue = multiprocessing.Queue()
+    
+    p1 = multiprocessing.Process(target=producer, args=(queue,))
+    p2 = multiprocessing.Process(target=consumer, args=(queue,))
+    
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
+
+# Pipe - 双向管道
+def sender(conn):
+    conn.send("Hello")
+    conn.send("World")
+    conn.close()
+
+def receiver(conn):
+    for msg in iter(lambda: conn.recv(), "World"):
+        print(f"收到: {msg}")
+
+if __name__ == "__main__":
+    parent_conn, child_conn = multiprocessing.Pipe()
+    
+    p1 = multiprocessing.Process(target=sender, args=(child_conn,))
+    p2 = multiprocessing.Process(target=receiver, args=(parent_conn,))
+    
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
+```
+
+##### 8.3.3 进程池（ProcessPoolExecutor）
+
+```python
+from concurrent.futures import ProcessPoolExecutor
+import os
+
+def cpu_bound_task(n):
+    """CPU 密集型任务"""
+    return sum(i * i for i in range(n))
+
+def main():
+    # 创建进程池
+    with ProcessPoolExecutor(max_workers=4) as executor:
+        # 提交任务
+        future = executor.submit(cpu_bound_task, 1000000)
+        print(future.result())
+        
+        # map - 批量提交
+        results = list(executor.map(cpu_bound_task, [1000, 2000, 3000]))
+        print(results)
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+#### 8.4 concurrent.futures
+
+```python
+from concurrent.futures import (
+    ThreadPoolExecutor,    # 线程池
+    ProcessPoolExecutor,   # 进程池
+    Future,               # 异步结果对象
+    as_completed          # 按完成顺序获取结果
+)
+
+# Future 对象
+with ThreadPoolExecutor(max_workers=2) as executor:
+    future = executor.submit(lambda: 42)
+    
+    # 检查状态
+    print(future.done())    # False
+    print(future.result())  # 42（阻塞等待）
+    
+    # as_completed - 按完成顺序
+    futures = [executor.submit(lambda i=i: i*i, i) for i in range(5)]
+    for future in as_completed(futures):
+        print(f"完成: {future.result()}")
+```
+
+---
+
+#### 📋 并发与并行速查表
+
+| 方案 | 适用场景 | GIL 影响 |
+|------|----------|----------|
+| `threading` | IO 密集型 | 小 |
+| `multiprocessing` | CPU 密集型 | 无 |
+| `asyncio` | IO 密集型 | 无（单线程） |
+| `concurrent.futures` | 通用 | 取决于 Executor 类型 |
+
+---
+
+#### 🎯 面试高频考点
+
+1. **Python 为什么有 GIL？**
+   - CPython 的设计选择
+   - 保证线程安全，简化实现
+   - 但限制了真正的并行
+
+2. **线程和进程的区别？**
+   - 线程共享内存，进程独立内存
+   - 线程创建快，进程创建慢
+   - 进程更稳定（一个崩溃不影响其他）
+   - 线程受 GIL 限制，进程不受限
+
+3. **什么情况下用 threading？**
+   - IO 密集型任务（网络请求、文件读写）
+   - 需要共享状态
+   - 任务较轻量
+
+4. **什么情况下用 multiprocessing？**
+   - CPU 密集型任务（计算、图像处理）
+   - 需要绕过 GIL
+   - 任务可并行化
+
+5. **如何选择并发方案？**
+   - IO 密集 + 高并发 → `asyncio`
+   - IO 密集 + 简单 → `threading`
+   - CPU 密集 → `multiprocessing`
+   - 通用 → `concurrent.futures`
 
 ### 9. 类型系统（Type Hints）
 - 基本类型注解
